@@ -46,6 +46,7 @@ namespace Utils
     }
 
     float magnitude(const sf::Vector2f& vector) {
+		// TODO: Make cheaper, use squared magnitude or something
         return std::sqrt(vector.x * vector.x + vector.y * vector.y); // Magnitude = sqrt(x^2 + y^2)
     }
 
