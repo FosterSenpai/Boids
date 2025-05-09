@@ -48,6 +48,7 @@ public:
 	void setWanderStrength(float strength) { m_wanderStrength = strength; }
 	void setWanderRadius(float radius) { m_wanderRadius = radius; }
 	void setWanderDistance(float distance) { m_wanderDistance = distance; }
+	void setWanderAngleRandomStrength(float strength) { m_wanderAngleRandomStrength = strength; }
 	// -- Getters --
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
 	float getSpeed() const { return m_speedMultiplier; }
@@ -60,6 +61,7 @@ public:
 	float getWanderStrength() const { return m_wanderStrength; }
 	float getWanderRadius() const { return m_wanderRadius; }
 	float getWanderDistance() const { return m_wanderDistance; }
+	float getWanderAngleRandomStrength() const { return m_wanderAngleRandomStrength; }
 private:
 	// **=== Private Members ===**
 	float m_maxSpeed;
@@ -88,7 +90,11 @@ private:
 	float m_wanderStrength;
 	float m_wanderRadius;
 	float m_wanderDistance;
-	sf::Angle m_wanderAngle; // Angle for the wander behaviour
+	float m_wanderAngle;
+	float m_wanderAngleRandomStrength;
+	float m_wanderAdjustmentTimer;
+	float m_targetWanderAngle;
+
 
 	// **=== Private Methods ===**
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method

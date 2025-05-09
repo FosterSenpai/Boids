@@ -50,4 +50,12 @@ namespace Utils
      * Returns a zero vector if the input vector's length is zero.
      */
     sf::Vector2f normalised(const sf::Vector2f& vector);
+
+    /**
+     * @brief Generates a random floating-point number within a specified range [min, max].
+     * @param min The minimum value of the range (inclusive).
+     * @param max The maximum value of the range (inclusive).
+     * @return A random float between min and max.
+     */
+    float randomRange(float min, float max);
 }

@@ -12,6 +12,7 @@
 
 // **=== Includes ===**
 #include "Utils.h"
+#include <random>
 
 namespace Utils
 {
@@ -64,5 +65,18 @@ namespace Utils
             return vector / length; // Divide vector by its length to get a unit vector
         }
         return { 0.0f, 0.0f }; // Return zero vector if the original vector had zero length
+    }
+
+	// Helper function to get rng engine
+    std::mt19937& getRandomEngine()
+    {
+        static std::mt19937 engine(std::random_device{}());
+        return engine;
+    }
+
+    float randomRange(float min, float max)
+    {
+        std::uniform_real_distribution<float> dist(min, max);
+        return dist(getRandomEngine()); // Uses the static engine
     }
 }

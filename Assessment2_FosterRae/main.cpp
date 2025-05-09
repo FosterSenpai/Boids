@@ -33,15 +33,20 @@ int main()
 
     // **=== UI Setup ===**
 
-	Slider speedSlider({ 10, 10 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getSpeed() , &window, "Speed: ");
-    Slider maxSeekSteeringSlider({ 10, 55 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getSeekMaxSteeringForce(), &window, "Max Seek Steering Force: ");
-	Slider seekStrengthSlider({ 10, 100 } , { 200, 20 }, 0.0f, 1.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ");
-	Slider maxFleeSteeringSlider({ 10, 55 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getFleeMaxSteeringForce(), &window, "Max Flee Steering Force: ");
-	Slider fleeStrengthSlider({ 10, 100 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getFleeStrength(), &window, "Flee Strength: ");
-	Slider wanderStrengthSlider({ 10, 100 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getWanderStrength(), &window, "Wander Strength: ");
-	Slider wanderMaxSteeringSlider({ 10, 55 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getWanderMaxSteeringForce(), &window, "Max Wander Steering Force: ");
-	Slider wanderDistanceSlider({ 10, 145 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getWanderDistance(), &window, "Wander Distance: ");
-	Slider wanderRadiusSlider({ 10, 190 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getWanderRadius(), &window, "Wander Radius: ");
+	Slider speedSlider({ 10, 20 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getSpeed() , &window, "Speed: ");
+
+    Slider seekMaxSteeringSlider({ 10, 65}, { 200, 20 }, 0.0f, 10.0f, agents[0]->getSeekMaxSteeringForce(), &window, "Max Seek Steering Force: ");
+	Slider seekStrengthSlider({ 10, 110 } , { 200, 20 }, 0.0f, 100.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ");
+
+	Slider fleeMaxSteeringSlider({ 10, 65 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getFleeMaxSteeringForce(), &window, "Max Flee Steering Force: ");
+	Slider fleeStrengthSlider({ 10, 110 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getFleeStrength(), &window, "Flee Strength: ");
+
+	Slider wanderMaxSteeringSlider({ 10, 65 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getWanderMaxSteeringForce(), &window, "Max Wander Steering Force: ");
+	Slider wanderStrengthSlider({ 10, 110 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getWanderStrength(), &window, "Wander Strength: ");
+	Slider wanderDistanceSlider({ 10, 155 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getWanderDistance(), &window, "Wander Distance: ");
+	Slider wanderRadiusSlider({ 10, 200 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getWanderRadius(), &window, "Wander Radius: ");
+	Slider wanderAngleRandomStrengthSlider({ 10, 245 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getWanderAngleRandomStrength(), &window, "Wander Angle Random Strength: ");
+	
 	bool showVisualizations = false; // Flag to toggle visualizations
 
 
@@ -90,15 +95,16 @@ int main()
 				speedSlider.handleEvent(*event);
 				// Seek
 				seekStrengthSlider.handleEvent(*event);
-                maxSeekSteeringSlider.handleEvent(*event);
+                seekMaxSteeringSlider.handleEvent(*event);
 				// Flee
-				maxFleeSteeringSlider.handleEvent(*event);
+				fleeMaxSteeringSlider.handleEvent(*event);
 				fleeStrengthSlider.handleEvent(*event);
 				// Wander
 				wanderStrengthSlider.handleEvent(*event);
 				wanderMaxSteeringSlider.handleEvent(*event);
 				wanderDistanceSlider.handleEvent(*event);
 				wanderRadiusSlider.handleEvent(*event);
+				wanderAngleRandomStrengthSlider.handleEvent(*event);
             }
 
         }
@@ -114,13 +120,14 @@ int main()
         // Get slider values
 		float currentSpeed = speedSlider.getValue();
 		float currentSeekStrength = seekStrengthSlider.getValue();
-		float currentMaxSteeringForce = maxSeekSteeringSlider.getValue();
-		float currentFleeMaxSteeringForce = maxFleeSteeringSlider.getValue();
+		float currentMaxSteeringForce = seekMaxSteeringSlider.getValue();
+		float currentFleeMaxSteeringForce = fleeMaxSteeringSlider.getValue();
 		float currentFleeStrength = fleeStrengthSlider.getValue();
 		float currentWanderStrength = wanderStrengthSlider.getValue();
 		float currentWanderMaxSteeringForce = wanderMaxSteeringSlider.getValue();
 		float currentWanderDistance = wanderDistanceSlider.getValue();
 		float currentWanderRadius = wanderRadiusSlider.getValue();
+		float currentWanderAngleRandomStrength = wanderAngleRandomStrengthSlider.getValue();
 
         // Update agents values
         for (auto& agent : agents)
@@ -135,6 +142,7 @@ int main()
 			agent->setWanderMaxSteeringForce(currentWanderMaxSteeringForce);
 			agent->setWanderDistance(currentWanderDistance);
 			agent->setWanderRadius(currentWanderRadius);
+			agent->setWanderAngleRandomStrength(currentWanderAngleRandomStrength * 2);
         }
 
         // **=== Rendering ===**
@@ -165,13 +173,13 @@ int main()
 			speedSlider.setLabel("Seek Speed: ");
 			window.draw(speedSlider);
 			window.draw(seekStrengthSlider);
-			window.draw(maxSeekSteeringSlider);
+			window.draw(seekMaxSteeringSlider);
 			break;
 		case MovementType::FLEE:
 			speedSlider.setLabel("Flee Speed: ");
 			window.draw(speedSlider);
 			window.draw(fleeStrengthSlider);
-			window.draw(maxFleeSteeringSlider);
+			window.draw(fleeMaxSteeringSlider);
 			break;
 		case MovementType::PURSUE:
 			break;
@@ -184,6 +192,7 @@ int main()
 			window.draw(wanderMaxSteeringSlider);
 			window.draw(wanderDistanceSlider);
 			window.draw(wanderRadiusSlider);
+			window.draw(wanderAngleRandomStrengthSlider);
 			break;
 		default:
 			break;

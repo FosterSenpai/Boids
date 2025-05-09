@@ -168,9 +168,9 @@ void Slider::updateText() {
         m_valueText.setString(m_labelPrefix + valueString);
     }
 
-    // Position text below the track
-    float textLocalX = 0.f;                       // Align with left edge of track
-    float textLocalY = m_track.getSize().y + 5.f; // Place 5px below track
+    // Position text above the track
+    float textLocalX = 0.f;
+    float textLocalY = m_track.getSize().y - 40.f;
     m_valueText.setPosition({ textLocalX, textLocalY });
 }
 
