@@ -34,8 +34,10 @@ int main()
     // **=== UI Setup ===**
 
 	Slider speedSlider({ 10, 10 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getSpeed() , &window, "Speed: ");
-    Slider maxSteeringSlider({ 10, 55 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getMaxSteeringForce(), &window, "Max Steering Force: ");
+    Slider maxSeekSteeringSlider({ 10, 55 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getSeekMaxSteeringForce(), &window, "Max Seek Steering Force: ");
 	Slider seekStrengthSlider({ 10, 100 } , { 200, 20 }, 0.0f, 1.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ");
+	Slider maxFleeSteeringSlider({ 10, 55 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getFleeMaxSteeringForce(), &window, "Max Flee Steering Force: ");
+	Slider fleeStrengthSlider({ 10, 100 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getFleeStrength(), &window, "Flee Strength: ");
 	bool showVisualizations = false; // Flag to toggle visualizations
 
 
@@ -55,8 +57,21 @@ int main()
                 window.close();
             else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>())
             {
-                if (keyPressed->scancode == sf::Keyboard::Scancode::V)
-					showVisualizations = !showVisualizations; // Toggle visualizations
+                if (keyPressed->scancode == sf::Keyboard::Scancode::V) {
+                    showVisualizations = !showVisualizations; // Toggle visualizations
+                }
+
+				// -- Change Behaviour --
+				if (keyPressed->scancode == sf::Keyboard::Scancode::Num1) { // 1 = Seek
+                    for (auto& agent : agents) {
+                        agent->setMovementType(MovementType::SEEK);
+                    }
+                }
+				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num2) { // 2 = Flee
+					for (auto& agent : agents) {
+						agent->setMovementType(MovementType::FLEE);
+					}
+				}
             }
 
             // **=== UI Interaction ===**
@@ -65,7 +80,9 @@ int main()
             if (event) {
 				speedSlider.handleEvent(*event);
 				seekStrengthSlider.handleEvent(*event);
-				maxSteeringSlider.handleEvent(*event);
+                maxSeekSteeringSlider.handleEvent(*event);
+				maxFleeSteeringSlider.handleEvent(*event);
+				fleeStrengthSlider.handleEvent(*event);
             }
 
         }
@@ -81,7 +98,9 @@ int main()
         // Get slider values
 		float currentSpeed = speedSlider.getValue();
 		float currentSeekStrength = seekStrengthSlider.getValue();
-		float currentMaxSteeringForce = maxSteeringSlider.getValue();
+		float currentMaxSteeringForce = maxSeekSteeringSlider.getValue();
+		float currentFleeMaxSteeringForce = maxFleeSteeringSlider.getValue();
+		float currentFleeStrength = fleeStrengthSlider.getValue();
 
         // Update agents values
         for (auto& agent : agents)
@@ -89,7 +108,9 @@ int main()
             agent->setTargetPosition(currentMouseTarget);
 			agent->setSpeed(currentSpeed);
 			agent->setSeekStrength(currentSeekStrength);
-			agent->setMaxSteeringForce(currentMaxSteeringForce);
+			agent->setSeekMaxSteeringForce(currentMaxSteeringForce);
+			agent->setFleeMaxSteeringForce(currentFleeMaxSteeringForce);
+			agent->setFleeStrength(currentFleeStrength);
         }
 
         // **=== Rendering ===**
@@ -112,9 +133,24 @@ int main()
         }
 
         // Draw Sliders
-        window.draw(speedSlider);
-        window.draw(seekStrengthSlider);
-		window.draw(maxSteeringSlider);
+		switch (agents[0]->getMovementType())
+		{
+		case MovementType::SEEK:
+			speedSlider.setLabel("Seek Speed: ");
+            window.draw(speedSlider);
+            window.draw(seekStrengthSlider);
+            window.draw(maxSeekSteeringSlider);
+			break;
+		case MovementType::FLEE:
+			speedSlider.setLabel("Flee Speed: ");
+            window.draw(speedSlider);
+			window.draw(fleeStrengthSlider);
+			window.draw(maxFleeSteeringSlider);
+			break;
+		default:
+			break;
+		}
+
 
         window.display();
     }

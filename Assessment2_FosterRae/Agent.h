@@ -37,14 +37,20 @@ public:
 	void drawVisualizations(sf::RenderTarget& target) const;
 	// -- Setters --
 	void setTargetPosition(const sf::Vector2f& position) { m_target.setPosition(position); }
-	void setMaxSteeringForce(float force) { m_maxSteeringForce = force; }
-	void setSeekStrength(float strength) { m_seekStrength = strength; }
 	void setSpeed(float speed) { m_speedMultiplier = speed; }
+	void setMovementType(MovementType type) { m_movementType = type; }
+	void setSeekMaxSteeringForce(float force) { m_seekMaxSteeringForce = force; }
+	void setSeekStrength(float strength) { m_seekStrength = strength; }
+	void setFleeMaxSteeringForce(float force) { m_fleeMaxSteeringForce = force; }
+	void setFleeStrength(float strength) { m_fleeStrength = strength; }
 	// -- Getters --
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
-	float getMaxSteeringForce() const { return m_maxSteeringForce; }
-	float getSeekStrength() const { return m_seekStrength; }
 	float getSpeed() const { return m_speedMultiplier; }
+	MovementType getMovementType() const { return m_movementType; }
+	float getSeekMaxSteeringForce() const { return m_seekMaxSteeringForce; }
+	float getSeekStrength() const { return m_seekStrength; }
+	float getFleeMaxSteeringForce() const { return m_fleeMaxSteeringForce; }
+	float getFleeStrength() const { return m_fleeStrength; }
 private:
 	// **=== Private Members ===**
 	float m_maxSpeed;
@@ -52,7 +58,6 @@ private:
 
 	sf::Transformable m_target;
 	sf::Vector2f m_velocity;
-	sf::Vector2f m_desiredVelocity; // Desired velocity towards the target (Update from movement behaviours)
 
 	// -- Shape --
 	sf::ConvexShape m_shape;  // Shape representing the agent
@@ -60,8 +65,14 @@ private:
 
 	// -- Steering Forces --
 	MovementType m_movementType; // Type of movement behaviour
-	float m_maxSteeringForce; // Maximum steering force for seek behaviour
+
+	sf::Vector2f m_seekDesiredVelocity;
+	float m_seekMaxSteeringForce; // Maximum steering force for seek behaviour
 	float m_seekStrength;      // Strength multiplier for the seek force
+
+	sf::Vector2f m_fleeDesiredVelocity; // Desired velocity for flee behaviour
+	float m_fleeMaxSteeringForce; // Maximum steering force for flee behaviour
+	float m_fleeStrength;      // Strength multiplier for the flee force
 
 	// **=== Private Methods ===**
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method
@@ -75,6 +86,6 @@ private:
 
 	// **=== Visualizations ===**
 	void drawVelocityLine(sf::RenderTarget& target) const;
-	void drawDesiredVelocityLine(sf::RenderTarget& target) const;
+	void drawDesiredVelocityLines(sf::RenderTarget& target) const;
 };
 

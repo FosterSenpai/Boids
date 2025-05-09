@@ -24,9 +24,11 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_velocity(0.0f, 0.0f),
 	m_agentSize(5.0f, 7.0f),
 	m_speedMultiplier(25.0f),
-	m_maxSteeringForce(5.0f),
+	m_movementType(MovementType::SEEK),
+	m_seekMaxSteeringForce(5.0f),
 	m_seekStrength(0.5f),
-	m_movementType(MovementType::SEEK)
+	m_fleeMaxSteeringForce(5.0f),
+	m_fleeStrength(0.5f)
 {
 	this->setPosition(spawnPos);    // Set the agent's position to spawn position
 	m_target.setPosition(spawnPos); // set for now, gets overridden in update
@@ -42,12 +44,31 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 	switch (m_movementType) {
 	case MovementType::SEEK:
 	{
-		// Calculate desired velocity for SEEK (target position - current position) 
-		m_desiredVelocity = Utils::normalised(m_target.getPosition() - this->getPosition()) * m_maxSpeed;
+	{
+		// Calc desired velocity seek(target position - current position) 
+		m_seekDesiredVelocity = Utils::normalised(m_target.getPosition() - this->getPosition()) * m_maxSpeed;
+		// -- Update Steering Force --
+		sf::Vector2f seekSteerForce = m_seekDesiredVelocity - m_velocity;
+		seekSteerForce = Utils::truncate(seekSteerForce, m_seekMaxSteeringForce);
+		// -- Update Velocity --
+		m_velocity += seekSteerForce * m_seekStrength * deltaTime; // Apply steering force to velocity
+		m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
 		break;
 	}
+	case MovementType::FLEE:
+	{
+		// Calc desired velocity flee(target position - current position) 
+		m_fleeDesiredVelocity = Utils::normalised(this->getPosition() - m_target.getPosition()) * m_maxSpeed;
+		// -- Update Steering Force --
+		sf::Vector2f fleeSteerForce = m_fleeDesiredVelocity - m_velocity;
+		fleeSteerForce = Utils::truncate(fleeSteerForce, m_fleeMaxSteeringForce);
+		// -- Update Velocity --
+		m_velocity += fleeSteerForce * m_fleeStrength * deltaTime;
+		m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
+		break;
+	}
+	}
 	default:
-		m_desiredVelocity = sf::Vector2f(0.f, 0.f); // Agent attempts to stop
 		break;
 	}
 
@@ -55,12 +76,6 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
     // MOVEMENT & PHYSICS
     //----------------------------------------------------------------
 
-	// -- Update Steering Force --
-	sf::Vector2f steerForce = m_desiredVelocity - m_velocity;
-	steerForce = Utils::truncate(steerForce, m_maxSteeringForce);
-    // -- Update Velocity --
-    m_velocity += steerForce * m_seekStrength * deltaTime; // Apply steering force to velocity
-    m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
     // -- Update Position --
     this->setPosition(this->getPosition() + m_velocity * m_speedMultiplier * deltaTime); // Update position based on velocity
 
@@ -128,9 +143,10 @@ void Agent::handleBoundary(const sf::RenderWindow& window)
 
 void Agent::drawVisualizations(sf::RenderTarget& target) const
 {
+	// TODO: Change different visuals on switch statement for different behaviours
 	// Draw visuals
 	drawVelocityLine(target);
-	drawDesiredVelocityLine(target);
+	drawDesiredVelocityLines(target);
 }
 
 void Agent::drawVelocityLine(sf::RenderTarget& target) const
@@ -153,20 +169,53 @@ void Agent::drawVelocityLine(sf::RenderTarget& target) const
 	target.draw(line);
 }
 
-void Agent::drawDesiredVelocityLine(sf::RenderTarget& target) const
+void Agent::drawDesiredVelocityLines(sf::RenderTarget& target) const
 {
-	float length = 3.0f; // Length of the line
-	// Create a VertexArray for the line
-	sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-	// Set the starting point of the line (agent's position + a bit)
-	line[0].position = this->getPosition() + m_velocity * 0.2f;
-	line[0].color = sf::Color::Green;
-	// Set the end point of the line (position + velocity)
-	sf::Vector2f endPoint = this->getPosition() + m_desiredVelocity * length;
-	line[1].position = endPoint;
-	line[1].color = sf::Color::Green;
-	// Draw the line
-	target.draw(line);
+	switch (m_movementType)
+	{
+	case MovementType::NONE:
+		break;
+	case MovementType::SEEK:
+	{
+		// -- Seek Desired Velocity Line --
+		float length = 3.0f; // Length of the line
+		// Create a VertexArray for the line
+		sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+		// Set the starting point of the line (agent's position + a bit)
+		line[0].position = this->getPosition() + m_velocity * 0.2f;
+		line[0].color = sf::Color::Green;
+		// Set the end point of the line (position + velocity)
+		sf::Vector2f endPoint = this->getPosition() + m_seekDesiredVelocity * length;
+		line[1].position = endPoint;
+		line[1].color = sf::Color::Green;
+		// Draw the line
+		target.draw(line);
+		break;
+	}
+	case MovementType::FLEE:
+	{
+		// -- Flee Desired Velocity Line --
+		float length = 3.0f; // Length of the line
+		// Create a VertexArray for the line
+		sf::VertexArray fleeLine(sf::PrimitiveType::Lines, 2);
+		// Set the starting point of the line (agent's position + a bit)
+		fleeLine[0].position = this->getPosition() + m_velocity * 0.2f;
+		fleeLine[0].color = sf::Color::Blue;
+		// Set the end point of the line (position + velocity)
+		sf::Vector2f fleeEndPoint = this->getPosition() + m_fleeDesiredVelocity * length;
+		fleeLine[1].position = fleeEndPoint;
+		fleeLine[1].color = sf::Color::Blue;
+		// Draw the line
+		target.draw(fleeLine);
+		break;
+	}
+	case MovementType::PURSUE:
+		break;
+	case MovementType::ARRIVAL:
+		break;
+	default:
+		break;
+	}
 }
 
 
