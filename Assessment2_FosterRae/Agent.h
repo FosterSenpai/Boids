@@ -22,7 +22,8 @@ enum class MovementType
 	SEEK,
 	FLEE,
 	PURSUE,
-	ARRIVAL
+	ARRIVAL,
+	WANDER
 };
 
 class Agent : public sf::Drawable, public sf::Transformable // Inherit from sf::Drawable & sf::Transformable
@@ -43,6 +44,10 @@ public:
 	void setSeekStrength(float strength) { m_seekStrength = strength; }
 	void setFleeMaxSteeringForce(float force) { m_fleeMaxSteeringForce = force; }
 	void setFleeStrength(float strength) { m_fleeStrength = strength; }
+	void setWanderMaxSteeringForce(float force) { m_wanderMaxSteeringForce = force; }
+	void setWanderStrength(float strength) { m_wanderStrength = strength; }
+	void setWanderRadius(float radius) { m_wanderRadius = radius; }
+	void setWanderDistance(float distance) { m_wanderDistance = distance; }
 	// -- Getters --
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
 	float getSpeed() const { return m_speedMultiplier; }
@@ -51,6 +56,10 @@ public:
 	float getSeekStrength() const { return m_seekStrength; }
 	float getFleeMaxSteeringForce() const { return m_fleeMaxSteeringForce; }
 	float getFleeStrength() const { return m_fleeStrength; }
+	float getWanderMaxSteeringForce() const { return m_wanderMaxSteeringForce; }
+	float getWanderStrength() const { return m_wanderStrength; }
+	float getWanderRadius() const { return m_wanderRadius; }
+	float getWanderDistance() const { return m_wanderDistance; }
 private:
 	// **=== Private Members ===**
 	float m_maxSpeed;
@@ -65,14 +74,21 @@ private:
 
 	// -- Steering Forces --
 	MovementType m_movementType; // Type of movement behaviour
-
+	// Seek
 	sf::Vector2f m_seekDesiredVelocity;
-	float m_seekMaxSteeringForce; // Maximum steering force for seek behaviour
-	float m_seekStrength;      // Strength multiplier for the seek force
-
-	sf::Vector2f m_fleeDesiredVelocity; // Desired velocity for flee behaviour
-	float m_fleeMaxSteeringForce; // Maximum steering force for flee behaviour
-	float m_fleeStrength;      // Strength multiplier for the flee force
+	float m_seekMaxSteeringForce;
+	float m_seekStrength;
+	// Flee
+	sf::Vector2f m_fleeDesiredVelocity;
+	float m_fleeMaxSteeringForce;
+	float m_fleeStrength;
+	// Wander
+	sf::Vector2f m_wanderDesiredVelocity;
+	float m_wanderMaxSteeringForce;
+	float m_wanderStrength;
+	float m_wanderRadius;
+	float m_wanderDistance;
+	sf::Angle m_wanderAngle; // Angle for the wander behaviour
 
 	// **=== Private Methods ===**
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method

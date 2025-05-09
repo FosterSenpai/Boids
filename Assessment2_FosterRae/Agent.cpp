@@ -28,7 +28,12 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_seekMaxSteeringForce(5.0f),
 	m_seekStrength(0.5f),
 	m_fleeMaxSteeringForce(5.0f),
-	m_fleeStrength(0.5f)
+	m_fleeStrength(0.5f),
+	m_wanderMaxSteeringForce(5.0f),
+	m_wanderStrength(0.5f),
+	m_wanderRadius(10.0f),
+	m_wanderDistance(25.0f),
+	m_wanderAngle(sf::degrees(0.0f))
 {
 	this->setPosition(spawnPos);    // Set the agent's position to spawn position
 	m_target.setPosition(spawnPos); // set for now, gets overridden in update
@@ -40,10 +45,11 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
     //----------------------------------------------------------------
     // STEERING BEHAVIOURS
     //----------------------------------------------------------------
-
-	switch (m_movementType) {
-	case MovementType::SEEK:
+	switch (m_movementType)
 	{
+	case MovementType::NONE:
+		break;
+	case MovementType::SEEK:
 	{
 		// Calc desired velocity seek(target position - current position) 
 		m_seekDesiredVelocity = Utils::normalised(m_target.getPosition() - this->getPosition()) * m_maxSpeed;
@@ -67,7 +73,12 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 		m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
 		break;
 	}
-	}
+	case MovementType::PURSUE:
+		break;
+	case MovementType::ARRIVAL:
+		break;
+	case MovementType::WANDER:
+		break;
 	default:
 		break;
 	}
@@ -76,12 +87,8 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
     // MOVEMENT & PHYSICS
     //----------------------------------------------------------------
 
-    // -- Update Position --
+    // -- Update Agent Position --
     this->setPosition(this->getPosition() + m_velocity * m_speedMultiplier * deltaTime); // Update position based on velocity
-
-    //----------------------------------------------------------------
-    // VISUALS & ORIENTATION
-    //----------------------------------------------------------------
 
     // -- Update Agent Rotation --
     if (Utils::magnitude(m_velocity) > 0.01f) // Only rotate if moving to avoid jittering
@@ -89,10 +96,6 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
         float angle = std::atan2(m_velocity.y, m_velocity.x) * 180.0f / 3.1415926535f;
         this->setRotation(sf::degrees(angle + 90.0f));
     }
-
-    //----------------------------------------------------------------
-    // WORLD INTERACTION
-    //----------------------------------------------------------------
 
     // -- Handle Screen Boundaries --
     handleBoundary(window); // Wrap agent position around the screen
@@ -213,6 +216,31 @@ void Agent::drawDesiredVelocityLines(sf::RenderTarget& target) const
 		break;
 	case MovementType::ARRIVAL:
 		break;
+	case MovementType::WANDER:
+	{
+		// Draw the wander circle pas + velocity + wander distance
+		sf::CircleShape circle(m_wanderRadius);
+		sf::Vector2f circlePos = this->getPosition() + Utils::normalised(m_velocity) * m_wanderDistance;
+		circle.setFillColor(sf::Color(255, 0, 0, 100)); // Semi-transparent red
+		circle.setPosition(circlePos);
+		circle.setOrigin({m_wanderRadius, m_wanderRadius});
+		circle.setOutlineColor(sf::Color::Red);
+		circle.setOutlineThickness(1.0f); // Set outline thickness
+		target.draw(circle); // Draw the circle
+
+		// Draw the wander angle
+		sf::VertexArray angleLine(sf::PrimitiveType::Lines, 2);
+		angleLine[0].position = circlePos;
+		angleLine[0].color = sf::Color::Yellow;
+		// Calculate the end point of the angle line
+		sf::Vector2f angleEndPoint = circlePos + Utils::normalised(m_velocity) * m_wanderRadius;
+		angleLine[1].position = angleEndPoint;
+		angleLine[1].color = sf::Color::Yellow;
+		// Draw the angle line
+		target.draw(angleLine);
+
+		break;
+	}
 	default:
 		break;
 	}
