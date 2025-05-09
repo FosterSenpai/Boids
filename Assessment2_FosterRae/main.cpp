@@ -142,7 +142,7 @@ int main()
 			agent->setWanderMaxSteeringForce(currentWanderMaxSteeringForce);
 			agent->setWanderDistance(currentWanderDistance);
 			agent->setWanderRadius(currentWanderRadius);
-			agent->setWanderAngleRandomStrength(currentWanderAngleRandomStrength * 2);
+			agent->setWanderAngleRandomStrength(currentWanderAngleRandomStrength * 3);
         }
 
         // **=== Rendering ===**
