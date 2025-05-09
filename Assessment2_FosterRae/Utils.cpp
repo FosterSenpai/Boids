@@ -49,12 +49,12 @@ namespace Utils
     }
 
     sf::Vector2f truncate(const sf::Vector2f& vector, float max) {
-        float length = magnitude(vector);
+        float length = magnitude(vector); // Calculate magnitude
 
-        if (length > max) { // If the vector's length is greater than max
-            return normalised(vector) * max; // Normalize the vector and scale it to max length
+        if (length > max && length > 0.00001f) { // Check length > 0 to avoid division by zero
+            return (vector / length) * max;
         }
-        return vector;
+        return vector; // Return original vector if no truncation needed or if it's a zero vector
     }
 
     sf::Vector2f normalised(const sf::Vector2f& vector) {

@@ -37,10 +37,12 @@ public:
 	void drawVisualizations(sf::RenderTarget& target) const;
 	// -- Setters --
 	void setTargetPosition(const sf::Vector2f& position) { m_target.setPosition(position); }
+	void setMaxSteeringForce(float force) { m_maxSteeringForce = force; }
 	void setSeekStrength(float strength) { m_seekStrength = strength; }
 	void setSpeed(float speed) { m_speedMultiplier = speed; }
 	// -- Getters --
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
+	float getMaxSteeringForce() const { return m_maxSteeringForce; }
 	float getSeekStrength() const { return m_seekStrength; }
 	float getSpeed() const { return m_speedMultiplier; }
 private:
@@ -58,7 +60,7 @@ private:
 
 	// -- Steering Forces --
 	MovementType m_movementType; // Type of movement behaviour
-	float m_seekSteerMaxForce; // Maximum steering force for seek behaviour
+	float m_maxSteeringForce; // Maximum steering force for seek behaviour
 	float m_seekStrength;      // Strength multiplier for the seek force
 
 	// **=== Private Methods ===**

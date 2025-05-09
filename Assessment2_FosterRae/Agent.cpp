@@ -23,8 +23,8 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	: m_maxSpeed(20.0f),
 	m_velocity(0.0f, 0.0f),
 	m_agentSize(5.0f, 7.0f),
-	m_speedMultiplier(1.0f),
-	m_seekSteerMaxForce(100.0f),
+	m_speedMultiplier(25.0f),
+	m_maxSteeringForce(5.0f),
 	m_seekStrength(0.5f),
 	m_movementType(MovementType::SEEK)
 {
@@ -36,40 +36,38 @@ Agent::Agent(sf::Vector2f& spawnPos)
 void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents)
 {
     //----------------------------------------------------------------
-    // INPUT & TARGETING
-    //----------------------------------------------------------------
-    // -- Update Target from Mouse Position --
-    sf::Vector2i mousePixelPos = sf::Mouse::getPosition(window);
-    sf::Vector2f mouseFloatPos(static_cast<float>(mousePixelPos.x), static_cast<float>(mousePixelPos.y));
-    m_target.setPosition(mouseFloatPos); // Set the target position to the mouse position
-
-    //----------------------------------------------------------------
     // STEERING BEHAVIOURS
     //----------------------------------------------------------------
-    // -- Seek Behaviour Calculation --
-	/*switch (m_movementType) {
+
+	switch (m_movementType) {
 	case MovementType::SEEK:
+	{
+		// Calculate desired velocity for SEEK (target position - current position) 
+		m_desiredVelocity = Utils::normalised(m_target.getPosition() - this->getPosition()) * m_maxSpeed;
 		break;
-
-	}*/
-
-    m_desiredVelocity = Utils::normalised(m_target.getPosition() - this->getPosition()) * m_maxSpeed;
-    sf::Vector2f steerForce = m_desiredVelocity - m_velocity;
-    Utils::truncate(steerForce, m_seekSteerMaxForce); // Limit the steering force to max
+	}
+	default:
+		m_desiredVelocity = sf::Vector2f(0.f, 0.f); // Agent attempts to stop
+		break;
+	}
 
     //----------------------------------------------------------------
     // MOVEMENT & PHYSICS
     //----------------------------------------------------------------
+
+	// -- Update Steering Force --
+	sf::Vector2f steerForce = m_desiredVelocity - m_velocity;
+	steerForce = Utils::truncate(steerForce, m_maxSteeringForce);
     // -- Update Velocity --
     m_velocity += steerForce * m_seekStrength * deltaTime; // Apply steering force to velocity
-    m_velocity = Utils::truncate(m_velocity, m_maxSpeed);  // Limit velocity to max speed
-
+    m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
     // -- Update Position --
     this->setPosition(this->getPosition() + m_velocity * m_speedMultiplier * deltaTime); // Update position based on velocity
 
     //----------------------------------------------------------------
     // VISUALS & ORIENTATION
     //----------------------------------------------------------------
+
     // -- Update Agent Rotation --
     if (Utils::magnitude(m_velocity) > 0.01f) // Only rotate if moving to avoid jittering
     {
@@ -80,6 +78,7 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
     //----------------------------------------------------------------
     // WORLD INTERACTION
     //----------------------------------------------------------------
+
     // -- Handle Screen Boundaries --
     handleBoundary(window); // Wrap agent position around the screen
 }

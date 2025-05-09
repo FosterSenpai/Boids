@@ -25,7 +25,7 @@ int main()
 
     // **=== Agent Creation ===**
 	std::vector<Agent*> agents;
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 30; ++i)
 	{
 		sf::Vector2f spawnPos(static_cast<float>(rand() % window.getSize().x), static_cast<float>(rand() % window.getSize().y));
 		agents.push_back(new Agent(spawnPos));
@@ -33,8 +33,9 @@ int main()
 
     // **=== UI Setup ===**
 
-	Slider speedSlider({ 10, 10 }, { 200, 20 }, 0.0f, 50.0f, agents[0]->getSpeed() , &window, "Speed: ");
-	Slider seekStrengthSlider({ 10, 55 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ");
+	Slider speedSlider({ 10, 10 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getSpeed() , &window, "Speed: ");
+    Slider maxSteeringSlider({ 10, 55 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getMaxSteeringForce(), &window, "Max Steering Force: ");
+	Slider seekStrengthSlider({ 10, 100 } , { 200, 20 }, 0.0f, 1.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ");
 	bool showVisualizations = false; // Flag to toggle visualizations
 
 
@@ -64,22 +65,31 @@ int main()
             if (event) {
 				speedSlider.handleEvent(*event);
 				seekStrengthSlider.handleEvent(*event);
+				maxSteeringSlider.handleEvent(*event);
             }
 
-            // **=== Mouse Input ===**
         }
+
+        // **===  Global Inputs  ===**
+        sf::Vector2i mousePixelPos = sf::Mouse::getPosition(window);
+        sf::Vector2f currentMouseTarget(static_cast<float>(mousePixelPos.x), static_cast<float>(mousePixelPos.y));
+
+
         // **=== Update Agents ===**
         
 		// -- Update Agents from Sliders --
         // Get slider values
 		float currentSpeed = speedSlider.getValue();
 		float currentSeekStrength = seekStrengthSlider.getValue();
+		float currentMaxSteeringForce = maxSteeringSlider.getValue();
 
         // Update agents values
         for (auto& agent : agents)
         {
+            agent->setTargetPosition(currentMouseTarget);
 			agent->setSpeed(currentSpeed);
 			agent->setSeekStrength(currentSeekStrength);
+			agent->setMaxSteeringForce(currentMaxSteeringForce);
         }
 
         // **=== Rendering ===**
@@ -104,6 +114,7 @@ int main()
         // Draw Sliders
         window.draw(speedSlider);
         window.draw(seekStrengthSlider);
+		window.draw(maxSteeringSlider);
 
         window.display();
     }
