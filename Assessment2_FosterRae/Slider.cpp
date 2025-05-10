@@ -164,7 +164,7 @@ void Slider::updateText() {
 
     // Position text above the track
     float textLocalX = 0.f;
-    float textLocalY = m_track.getSize().y - 40.f;
+    float textLocalY = m_track.getSize().y - 30.f;
     m_valueText.setPosition({ textLocalX, textLocalY });
 }
 

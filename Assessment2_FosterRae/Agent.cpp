@@ -24,7 +24,7 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	: m_maxSpeed(20.0f),
 	m_velocity(0.0f, 0.0f),
 	m_agentSize(5.0f, 7.0f),
-	m_speedMultiplier(25.0f),
+	m_speedMultiplier(15.0f),
 
 	m_seekWeighting(0.0f),
 	m_seekMaxSteeringForce(5.0f),
@@ -146,16 +146,29 @@ void Agent::handleBoundary(const sf::RenderWindow& window)
 
 // **=== Behaviours ===**
 
+void Agent::applySteeringFromDesiredVelocity(const sf::Vector2f& desiredVelocity, float maxSteeringForce, float strength, float weighting, float deltaTime)
+{
+	// Update Steering Force
+	sf::Vector2f steerForce = desiredVelocity - m_velocity;
+	// Apply the steering force
+	applySteeringFromForce(steerForce, maxSteeringForce, strength, weighting, deltaTime);
+}
+
+void Agent::applySteeringFromForce(sf::Vector2f force, float maxSteeringForce, float strength, float weighting, float deltaTime)
+{
+	// Truncate the force to the max steering force
+	force = Utils::truncate(force, maxSteeringForce);
+	// Update Velocity
+	m_velocity += force * strength * weighting * deltaTime;
+	m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
+}
+
 void Agent::seek(float deltaTime)
 {
 	// Calc desired velocity seek(target position - current position) 
 	m_seekDesiredVelocity = Utils::normalised(m_target.getPosition() - this->getPosition()) * m_maxSpeed;
 	// Update Steering Force
-	sf::Vector2f seekSteerForce = m_seekDesiredVelocity - m_velocity;
-	seekSteerForce = Utils::truncate(seekSteerForce, m_seekMaxSteeringForce);
-	// Update Velocity
-	m_velocity += seekSteerForce * m_seekStrength * m_seekWeighting * deltaTime; // Apply steering force to velocity
-	m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
+	applySteeringFromDesiredVelocity(m_seekDesiredVelocity, m_seekMaxSteeringForce, m_seekStrength, m_seekWeighting, deltaTime);
 }
 
 void Agent::flee(float deltaTime) 
@@ -163,11 +176,7 @@ void Agent::flee(float deltaTime)
 	// Calc desired velocity flee(target position - current position) 
 	m_fleeDesiredVelocity = Utils::normalised(this->getPosition() - m_target.getPosition()) * m_maxSpeed;
 	// Update Steering Force
-	sf::Vector2f fleeSteerForce = m_fleeDesiredVelocity - m_velocity;
-	fleeSteerForce = Utils::truncate(fleeSteerForce, m_fleeMaxSteeringForce);
-	// Update Velocity
-	m_velocity += fleeSteerForce * m_fleeStrength * m_fleeWeighting * deltaTime;
-	m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
+	applySteeringFromDesiredVelocity(m_fleeDesiredVelocity, m_fleeMaxSteeringForce, m_fleeStrength, m_fleeWeighting, deltaTime);
 }
 
 void Agent::wander(float deltaTime)
@@ -190,12 +199,9 @@ void Agent::wander(float deltaTime)
 	sf::Vector2f targetPosition = circlePosition + sf::Vector2f(std::cos(m_wanderAngle), std::sin(m_wanderAngle)) * m_wanderRadius;
 	// Calculate the desired velocity towards the target position
 	m_wanderDesiredVelocity = Utils::normalised(targetPosition - this->getPosition()) * m_maxSpeed;
-	// Update Steering Force
-	sf::Vector2f wanderSteerForce = m_wanderDesiredVelocity - m_velocity;
-	wanderSteerForce = Utils::truncate(wanderSteerForce, m_wanderMaxSteeringForce);
-	// Update Velocity
-	m_velocity += wanderSteerForce * m_wanderStrength * m_wanderWeighting * deltaTime;
-	m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
+
+	sf::Vector2f wanderSteerForce = m_wanderDesiredVelocity - m_velocity; 
+	applySteeringFromForce(wanderSteerForce, m_wanderMaxSteeringForce, m_wanderStrength, m_wanderWeighting, deltaTime);
 }
 
 void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
@@ -214,7 +220,6 @@ void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
 
 			if (distance < getSeparationNeighbourhoodRadius()) // Check if distance is within neighbourhood radius
 			{
-				
 				sf::Vector2f normDifference = Utils::normalised(difference); // It was at this very point i realised sf::Vector2f has its own norm, length and other functions :(
 				normDifference = normDifference / distance;
 				diffAverage += normDifference; // Add to average
@@ -227,11 +232,8 @@ void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
 	{
 		diffAverage /= static_cast<float>(count);                     // Average the difference vector
 		diffAverage = Utils::normalised(diffAverage) * m_maxSpeed;    // Normalise and scale to max speed
-		sf::Vector2f separationSteerForce = diffAverage - m_velocity; // Calculate steering force
-		separationSteerForce = Utils::truncate(separationSteerForce, m_separationMaxSteeringForce); // Truncate to max steering force
-
-		m_velocity += separationSteerForce * m_separationStrength * m_separationWeighting * deltaTime; // Update velocity
-		m_velocity = Utils::truncate(m_velocity, m_maxSpeed);                                          // Truncate to max speed
+		// apply steering force
+		applySteeringFromDesiredVelocity(diffAverage, m_separationMaxSteeringForce, m_separationStrength, m_separationWeighting, deltaTime);
 	}
 }
 

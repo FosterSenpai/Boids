@@ -20,7 +20,7 @@
 int main()
 {
     // **=== Window Setup ===**
-    sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Steering Behaviours Test");
+    sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Foster's Boids");
     window.setFramerateLimit(60);
 
     // **=== Agent Creation ===**
@@ -39,24 +39,21 @@ int main()
 		return EXIT_FAILURE;
 	}
 
-	Slider speedSlider({ 10, 20 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getSpeed() , &window, "Speed: ", font);
+	sf::Vector2f sliderSize(200.0f, 10.0f);
 
-	Slider seekWeightingSlider({ 10, 380 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getSeekWeighting(), &window, "Seek Weighting: ", font);
-	Slider seekMaxSteeringSlider({ 10, 65}, { 200, 20 }, 0.0f, 10.0f, agents[0]->getSeekMaxSteeringForce(), &window, "Max Seek Steering Force: ", font);
-	Slider seekStrengthSlider({ 10, 110 } , { 200, 20 }, 0.0f, 100.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ", font);
+	Slider speedSlider({ 10, 20 }, sliderSize, 0.0f, 100.0f, agents[0]->getSpeed() , &window, "Speed: ", font);
 
-	Slider fleeWeightingSlider({ 10, 425 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getFleeWeighting(), &window, "Flee Weighting: ", font);
-	Slider fleeMaxSteeringSlider({ 10, 155 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getFleeMaxSteeringForce(), &window, "Max Flee Steering Force: ", font);
-	Slider fleeStrengthSlider({ 10, 200 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getFleeStrength(), &window, "Flee Strength: ", font);
+	Slider seekWeightingSlider({ 10, 200 }, sliderSize, 0.0f, 1.0f, agents[0]->getSeekWeighting(), &window, "Seek Weighting: ", font);
+	Slider seekStrengthSlider({ 10, 80 } , sliderSize, 0.0f, 100.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ", font);
 
-	Slider wanderWeightingSlider({ 10, 470 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getWanderWeighting(), &window, "Wander Weighting: ", font);
-	Slider wanderMaxSteeringSlider({ 10, 245 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getWanderMaxSteeringForce(), &window, "Max Wander Steering Force: ", font);
-	Slider wanderStrengthSlider({ 10, 290 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getWanderStrength(), &window, "Wander Strength: ", font);
-	Slider wanderAngleRandomStrengthSlider({ 10, 335 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getWanderAngleRandomStrength(), &window, "Wander Angle Random Strength: ", font);
+	Slider fleeWeightingSlider({ 10, 230 }, sliderSize, 0.0f, 1.0f, agents[0]->getFleeWeighting(), &window, "Flee Weighting: ", font);
+	Slider fleeStrengthSlider({ 10, 110 }, sliderSize, 0.0f, 100.0f, agents[0]->getFleeStrength(), &window, "Flee Strength: ", font);
 
+	Slider wanderWeightingSlider({ 10, 260 }, sliderSize, 0.0f, 1.0f, agents[0]->getWanderWeighting(), &window, "Wander Weighting: ", font);
+	Slider wanderStrengthSlider({ 10, 140 }, sliderSize, 0.0f, 100.0f, agents[0]->getWanderStrength(), &window, "Wander Strength: ", font);
+	Slider wanderAngleRandomStrengthSlider({ 10, 320 }, sliderSize, 0.0f, 1.0f, agents[0]->getWanderAngleRandomStrength(), &window, "Wander Angle Range: ", font);
 	
 	bool showVisualizations = false; // Flag to toggle visualizations
-
 
     // **=== Game Loop ===**
     sf::Clock deltaClock;
@@ -105,15 +102,12 @@ int main()
 
 				seekWeightingSlider.handleEvent(*event);
 				seekStrengthSlider.handleEvent(*event);
-                seekMaxSteeringSlider.handleEvent(*event);
 
 				fleeWeightingSlider.handleEvent(*event);
-				fleeMaxSteeringSlider.handleEvent(*event);
 				fleeStrengthSlider.handleEvent(*event);
 
 				wanderWeightingSlider.handleEvent(*event);
 				wanderStrengthSlider.handleEvent(*event);
-				wanderMaxSteeringSlider.handleEvent(*event);
 				wanderAngleRandomStrengthSlider.handleEvent(*event);
             }
 
@@ -132,15 +126,12 @@ int main()
 
 		float currentSeekWeighting = seekWeightingSlider.getValue();
 		float currentSeekStrength = seekStrengthSlider.getValue();
-		float currentSeekMaxSteeringForce = seekMaxSteeringSlider.getValue();
 
 		float currentFleeWeighting = fleeWeightingSlider.getValue();
-		float currentFleeMaxSteeringForce = fleeMaxSteeringSlider.getValue();
 		float currentFleeStrength = fleeStrengthSlider.getValue();
 
 		float currentWanderWeighting = wanderWeightingSlider.getValue();
 		float currentWanderStrength = wanderStrengthSlider.getValue();
-		float currentWanderMaxSteeringForce = wanderMaxSteeringSlider.getValue();
 		float currentWanderAngleRandomStrength = wanderAngleRandomStrengthSlider.getValue();
 
         // Update agents values
@@ -151,15 +142,12 @@ int main()
 
 			agent->setSeekWeighting(currentSeekWeighting);
 			agent->setSeekStrength(currentSeekStrength);
-			agent->setSeekMaxSteeringForce(currentSeekMaxSteeringForce);
 
 			agent->setFleeWeighting(currentFleeWeighting);
-			agent->setFleeMaxSteeringForce(currentFleeMaxSteeringForce);
 			agent->setFleeStrength(currentFleeStrength);
 
 			agent->setWanderWeighting(currentWanderWeighting);
 			agent->setWanderStrength(currentWanderStrength);
-			agent->setWanderMaxSteeringForce(currentWanderMaxSteeringForce);
 			agent->setWanderAngleRandomStrength(currentWanderAngleRandomStrength * 3);
         }
 
@@ -187,15 +175,12 @@ int main()
 
 		window.draw(seekWeightingSlider);
 		window.draw(seekStrengthSlider);
-		window.draw(seekMaxSteeringSlider);
 
 		window.draw(fleeWeightingSlider);
 		window.draw(fleeStrengthSlider);
-		window.draw(fleeMaxSteeringSlider);
 
 		window.draw(wanderWeightingSlider);
 		window.draw(wanderStrengthSlider);
-		window.draw(wanderMaxSteeringSlider);
 		window.draw(wanderAngleRandomStrengthSlider);
 
         window.display();

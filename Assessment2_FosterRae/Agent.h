@@ -185,6 +185,8 @@ private:
 	void drawDesiredVelocityLines(sf::RenderTarget& target) const;
 
 	// **=== Steering Behaviours ===**
+	void applySteeringFromDesiredVelocity(const sf::Vector2f& desiredVelocity, float maxSteeringForce, float strength, float weighting, float deltaTime);
+	void applySteeringFromForce(sf::Vector2f force, float maxSteeringForce, float strength, float weighting, float deltaTime);
 	void seek(float deltaTime);
 	void flee(float deltaTime);
 	void wander(float deltaTime);
