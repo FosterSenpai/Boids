@@ -18,16 +18,6 @@
 namespace Utils
 {
     // **=== Public Methods ===**
-
-    /**
-     * @brief Calculates the shortest vector between two points in a toroidal (wrapping) world.
-     * @param from The starting position vector.
-     * @param to The target position vector.
-     * @param worldSize The dimensions (width, height) of the wrapping world.
-     * @return The shortest displacement vector from 'from' to 'to', considering wrapping.
-     */
-    sf::Vector2f shortestWrappedVector(const sf::Vector2f& from, const sf::Vector2f& to, const sf::Vector2f& worldSize);
-
     /**
      * @brief Calculate the magnitude (length) of a vector.
      * @param vector The vector to calculate the magnitude of.

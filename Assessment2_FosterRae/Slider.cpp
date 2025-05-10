@@ -135,7 +135,6 @@ void Slider::handleEvent(const sf::Event& event) {
     }
 }
 
-
 float Slider::getValue() const {
     return m_value;
 }
