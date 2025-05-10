@@ -35,7 +35,7 @@ public:
      * @param window Pointer to the SFML window for coordinate mapping.
      * @param label The text label prefix to display.
      */
-    Slider(sf::Vector2f position, sf::Vector2f size, float minValue, float maxValue, float initialValue, sf::RenderWindow* window, const std::string& label);
+    Slider(sf::Vector2f position, sf::Vector2f size, float minValue, float maxValue, float initialValue, sf::RenderWindow* window, const std::string& label, const sf::Font& font);
 
     // **=== Public Methods ===**
 
@@ -89,7 +89,7 @@ private:
 
     sf::RectangleShape m_track;       // The slider track (positioned locally at 0,0)
     sf::RectangleShape m_handle;      // The draggable handle (positioned locally relative to track)
-    sf::Font m_font;                  // Font for the value text
+	const sf::Font& m_font;       // Font reference for text display
     sf::Text m_valueText;             // Displays the current value + label (positioned locally)
 
     sf::Vector2f m_size;              // Size of the slider track

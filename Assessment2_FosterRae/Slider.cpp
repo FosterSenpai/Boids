@@ -13,9 +13,9 @@
 #include <iostream> 
 
 // **=== Constructor ===**
-Slider::Slider(sf::Vector2f position, sf::Vector2f size, float minValue, float maxValue, float initialValue, sf::RenderWindow* window, const std::string& label)
+Slider::Slider(sf::Vector2f position, sf::Vector2f size, float minValue, float maxValue, float initialValue, sf::RenderWindow* window, const std::string& label, const sf::Font& font)
     :
-    m_font(),
+    m_font(font),
     m_valueText(m_font),
     m_size(size),
     m_minValue(minValue),
@@ -41,12 +41,7 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float minValue, float m
     m_handle.setFillColor(sf::Color(200, 200, 200));
     // Handle local position is set by updateHandlePosition based on m_value
 
-    // --- Font and Text ---
-    // Load the font using openFromFile (NOW the m_font object exists)
-    if (!m_font.openFromFile("PixelDigivolveItalic-dV8R.ttf"))
-    {
-        std::cerr << "Error: Failed to load font 'PixelDigivolveItalic-dV8R.ttf' for Slider!" << std::endl;
-    }
+    // --- Text ---
 
     // Set up the text properties (Font was passed in the constructor, position is set in updateText)
     m_valueText.setCharacterSize(12);

@@ -33,20 +33,26 @@ int main()
 
     // **=== UI Setup ===**
 
-	Slider speedSlider({ 10, 20 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getSpeed() , &window, "Speed: ");
+	sf::Font font;
+	if (!font.openFromFile("PixelDigivolveItalic-dV8R.ttf")) {
+		std::cerr << "Error: Failed to load font for Sliders" << std::endl;
+		return EXIT_FAILURE;
+	}
 
-	Slider seekWeightingSlider({ 10, 380 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getSeekWeighting(), &window, "Seek Weighting: ");
-	Slider seekMaxSteeringSlider({ 10, 65}, { 200, 20 }, 0.0f, 10.0f, agents[0]->getSeekMaxSteeringForce(), &window, "Max Seek Steering Force: ");
-	Slider seekStrengthSlider({ 10, 110 } , { 200, 20 }, 0.0f, 100.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ");
+	Slider speedSlider({ 10, 20 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getSpeed() , &window, "Speed: ", font);
 
-	Slider fleeWeightingSlider({ 10, 425 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getFleeWeighting(), &window, "Flee Weighting: ");
-	Slider fleeMaxSteeringSlider({ 10, 155 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getFleeMaxSteeringForce(), &window, "Max Flee Steering Force: ");
-	Slider fleeStrengthSlider({ 10, 200 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getFleeStrength(), &window, "Flee Strength: ");
+	Slider seekWeightingSlider({ 10, 380 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getSeekWeighting(), &window, "Seek Weighting: ", font);
+	Slider seekMaxSteeringSlider({ 10, 65}, { 200, 20 }, 0.0f, 10.0f, agents[0]->getSeekMaxSteeringForce(), &window, "Max Seek Steering Force: ", font);
+	Slider seekStrengthSlider({ 10, 110 } , { 200, 20 }, 0.0f, 100.0f, agents[0]->getSeekStrength(), &window, "Seek Strength: ", font);
 
-	Slider wanderWeightingSlider({ 10, 470 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getWanderWeighting(), &window, "Wander Weighting: ");
-	Slider wanderMaxSteeringSlider({ 10, 245 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getWanderMaxSteeringForce(), &window, "Max Wander Steering Force: ");
-	Slider wanderStrengthSlider({ 10, 290 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getWanderStrength(), &window, "Wander Strength: ");
-	Slider wanderAngleRandomStrengthSlider({ 10, 335 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getWanderAngleRandomStrength(), &window, "Wander Angle Random Strength: ");
+	Slider fleeWeightingSlider({ 10, 425 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getFleeWeighting(), &window, "Flee Weighting: ", font);
+	Slider fleeMaxSteeringSlider({ 10, 155 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getFleeMaxSteeringForce(), &window, "Max Flee Steering Force: ", font);
+	Slider fleeStrengthSlider({ 10, 200 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getFleeStrength(), &window, "Flee Strength: ", font);
+
+	Slider wanderWeightingSlider({ 10, 470 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getWanderWeighting(), &window, "Wander Weighting: ", font);
+	Slider wanderMaxSteeringSlider({ 10, 245 }, { 200, 20 }, 0.0f, 10.0f, agents[0]->getWanderMaxSteeringForce(), &window, "Max Wander Steering Force: ", font);
+	Slider wanderStrengthSlider({ 10, 290 }, { 200, 20 }, 0.0f, 100.0f, agents[0]->getWanderStrength(), &window, "Wander Strength: ", font);
+	Slider wanderAngleRandomStrengthSlider({ 10, 335 }, { 200, 20 }, 0.0f, 1.0f, agents[0]->getWanderAngleRandomStrength(), &window, "Wander Angle Random Strength: ", font);
 
 	
 	bool showVisualizations = false; // Flag to toggle visualizations
