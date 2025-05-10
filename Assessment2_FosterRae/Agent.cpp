@@ -201,21 +201,37 @@ void Agent::wander(float deltaTime)
 void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
 {
 	sf::Vector2f SelfPos = this->getPosition(); // Save own position
+	sf::Vector2f diffAverage(0.0f, 0.0f); // Average difference vector
+	int count = 0; // Count of neighbours
 
 	for (const auto& agent : allAgents)
 	{
 		if (agent != this) // Don't separate from self
 		{
-			sf::Vector2f m_otherAgentPos = agent->getPosition();
-			sf::Vector2f difference = SelfPos - m_otherAgentPos;
-			float distance = Utils::magnitude(difference);
+			sf::Vector2f m_otherAgentPos = agent->getPosition(); // Get other agent's position
+			sf::Vector2f difference = SelfPos - m_otherAgentPos; // Calculate vec between agents
+			float distance = Utils::magnitude(difference);       // Calculate distance between agents
 
-			if (distance < getSeparationNeighbourhoodRadius())
+			if (distance < getSeparationNeighbourhoodRadius()) // Check if distance is within neighbourhood radius
 			{
+				
 				sf::Vector2f normDifference = Utils::normalised(difference); // It was at this very point i realised sf::Vector2f has its own norm, length and other functions :(
 				normDifference = normDifference / distance;
+				diffAverage += normDifference; // Add to average
+				count++;
 			}
 		}
+	}
+
+	if (count > 0) // If there are neighbours
+	{
+		diffAverage /= static_cast<float>(count);                     // Average the difference vector
+		diffAverage = Utils::normalised(diffAverage) * m_maxSpeed;    // Normalise and scale to max speed
+		sf::Vector2f separationSteerForce = diffAverage - m_velocity; // Calculate steering force
+		separationSteerForce = Utils::truncate(separationSteerForce, m_separationMaxSteeringForce); // Truncate to max steering force
+
+		m_velocity += separationSteerForce * m_separationStrength * m_separationWeighting * deltaTime; // Update velocity
+		m_velocity = Utils::truncate(m_velocity, m_maxSpeed);                                          // Truncate to max speed
 	}
 }
 
