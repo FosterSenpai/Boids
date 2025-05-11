@@ -71,8 +71,14 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_evasionWeighting(0.0f),
 	m_evasionMaxSteeringForce(5.0f),
 	m_evasionStrength(2.0f),
-	m_evasionTarget(nullptr)
+	m_evasionTarget(nullptr),
 
+	m_obstacleAvoidanceWeighting(0.0f),
+	m_obstacleAvoidanceMaxSteeringForce(5.0f),
+	m_obstacleAvoidanceStrength(2.0f),
+	m_obstacleDetectionBoxLength(50.0f),
+
+	m_debug_closestThreatFound(false)
 {
 	this->setPosition(spawnPos);    // Set the agnets position to spawn position
 	m_target.setPosition(spawnPos); // set for now, gets overridden in update
@@ -81,9 +87,10 @@ Agent::Agent(sf::Vector2f& spawnPos)
 
 // **=== Public Methods ===**
 
-void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents)
+void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents, const std::vector<Obstacle>& obstacles)
 {
 	// -- Update Agent Behaviour --
+	obstacleAvoidance(deltaTime, obstacles);
 	seek(deltaTime);
 	flee(deltaTime);
 	wander(deltaTime);
@@ -94,6 +101,7 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 
 	pursuit(deltaTime, allAgents);
 	evasion(deltaTime, allAgents);
+
 
     // -- Update Agent Position --
     this->setPosition(this->getPosition() + m_velocity * m_speedMultiplier * deltaTime); // Update position based on velocity
@@ -167,7 +175,7 @@ void Agent::seek(float deltaTime)
 	// If behaviour has no weight dont do calculations
 	if (m_seekWeighting <= 0.0f)
 	{
-		m_seekDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		m_seekDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
 
@@ -181,7 +189,7 @@ void Agent::flee(float deltaTime)
 	// If behaviour has no weight dont do calculations
 	if (m_fleeWeighting <= 0.0f)
 	{
-		m_fleeDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		m_fleeDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
 
@@ -195,7 +203,7 @@ void Agent::wander(float deltaTime)
 	// If behaviour has no weight dont do calculations
 	if (m_wanderWeighting <= 0.0f)
 	{
-		m_wanderDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		m_wanderDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
 
@@ -226,7 +234,7 @@ void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
 	// If behaviour has no weight dont do calculations
 	if (m_separationWeighting <= 0.0f)
 	{
-		m_separationDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		m_separationDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
 
@@ -266,7 +274,7 @@ void Agent::cohesion(float deltaTime, const std::vector<Agent*>& allAgents)
 	// If behavior has no weight dont do calculations
 	if (m_cohesionWeighting <= 0.0f) 
 	{
-		m_cohesionDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		m_cohesionDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
 
@@ -307,7 +315,7 @@ void Agent::alignment(float deltaTime, const std::vector<Agent*>& allAgents)
 	// If behaviour has no weight dont do calculations
 	if (m_alignmentWeighting <= 0.0f)
 	{
-		m_alignmentDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		m_alignmentDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
 
@@ -352,7 +360,7 @@ void Agent::pursuit(float deltaTime, const std::vector<Agent*>& allAgents)
 	}
 	if (m_pursuitWeighting <= 0.0f || m_pursuitTarget == nullptr)
 	{
-		m_pursuitDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		m_pursuitDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
 
@@ -387,7 +395,7 @@ void Agent::evasion(float deltaTime, const std::vector<Agent*>& allAgents)
 	}
 	if (m_evasionWeighting <= 0.0f || m_evasionTarget == nullptr)
 	{
-		m_evasionDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		m_evasionDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
 	m_evasionTarget->setColor(sf::Color::Red); // Set target color to red for visualization
@@ -403,16 +411,177 @@ void Agent::evasion(float deltaTime, const std::vector<Agent*>& allAgents)
 	// Update Steering Force
 	applySteeringFromDesiredVelocity(m_evasionDesiredVelocity, m_evasionMaxSteeringForce, m_evasionStrength, m_evasionWeighting, deltaTime);
 }
+void Agent::obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obstacles) 
+{
+	// -- Initial Checks & Setup --
+	m_debug_closestThreatFound = false;
+	m_debug_isUnsticking = false;
+	// Only process if the behavior has weight and the agent is moving
+	if (m_obstacleAvoidanceWeighting <= 0.0f || Utils::magnitude(m_velocity) < 0.001f) {
+		m_obstacleAvoidanceDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
+		return; // No avoidance needed or possible
+	}
+
+	sf::Vector2f agentPos = this->getPosition();
+	sf::Vector2f velocityNormalised = Utils::normalised(m_velocity);
+
+	// -- Unsticking Logic (Agent Center Inside Obstacle) --
+	for (const auto& obstacle : obstacles) {
+		sf::Vector2f obsMin = obstacle.getMinBound();
+		sf::Vector2f obsMax = obstacle.getMaxBound();
+
+		// Simple AABB point containment check for agent's position
+		if (agentPos.x > obsMin.x && agentPos.x < obsMax.x &&
+			agentPos.y > obsMin.y && agentPos.y < obsMax.y) {
+
+			sf::Vector2f obstacleCenter = obsMin + obstacle.m_size * 0.5f;
+			sf::Vector2f unstickDirection = Utils::normalised(agentPos - obstacleCenter);
+
+			// If unstickDirection is zero (agent perfectly at center), pick an arbitrary direction
+			if (Utils::magnitude(unstickDirection) < 0.001f) {
+				unstickDirection = sf::Vector2f(1.0f, 0.0f);
+			}
+
+			m_obstacleAvoidanceDesiredVelocity = unstickDirection * m_maxSpeed;
+
+			m_debug_isUnsticking = true;
+			m_debug_unstickDirection = unstickDirection;
+			// Capture feeler still for visualization
+			float speedRatio = (m_maxSpeed > 0.01f) ? (Utils::magnitude(m_velocity) / m_maxSpeed) : 1.0f;
+			float dynamicDetectionLength = m_obstacleDetectionBoxLength * speedRatio;
+			dynamicDetectionLength = std::max(dynamicDetectionLength, std::max(m_agentSize.x, m_agentSize.y) * 1.5f);
+			m_detectionFeelerP1 = agentPos;
+			m_detectionFeelerP2 = agentPos + velocityNormalised * dynamicDetectionLength;
+			// Apply this unsticking force with high priority/strength
+			applySteeringFromDesiredVelocity(m_obstacleAvoidanceDesiredVelocity,
+				m_obstacleAvoidanceMaxSteeringForce * 1.5f, // Boost max force
+				m_obstacleAvoidanceStrength * 1.5f,     // Boost strength
+				1.0f, // Max weighting, effectively overriding others
+				deltaTime);
+			return; // Prioritize unsticking; skip other avoidance logic for this frame
+		}
+	}
+
+	// -- Feeler-Based Threat Detection --
+
+	// Dynamically adjust detection box length based on speed
+	float speedRatio = (m_maxSpeed > 0.01f) ? (Utils::magnitude(m_velocity) / m_maxSpeed) : 1.0f;
+	float dynamicDetectionLength = m_obstacleDetectionBoxLength * speedRatio;
+	// Minimum detection length
+	dynamicDetectionLength = std::max(dynamicDetectionLength, std::max(m_agentSize.x, m_agentSize.y) * 1.5f);
+
+	m_detectionFeelerP1 = agentPos;
+	m_detectionFeelerP2 = agentPos + velocityNormalised * dynamicDetectionLength;
+
+	Obstacle* closestThreat = nullptr;
+	float minThreatIntersectionT = 2.0f; // Initialize high (max t for segment is 1.0)
+	sf::Vector2f threatNormal(0.0f, 0.0f);
+
+	// Find the closest obstacle intersecting the feeler
+	for (const auto& obstacle : obstacles) {
+		float currentIntersectionT;
+		sf::Vector2f currentNormal;
+
+		if (Utils::lineIntersectsAABB(m_detectionFeelerP1, m_detectionFeelerP2,
+			obstacle.getMinBound(), obstacle.getMaxBound(),
+			currentIntersectionT, currentNormal)) {
+			// Check if this intersection is valid (t within [0,1]) and closer than previous threats
+			if (currentIntersectionT >= 0.0f && currentIntersectionT <= 1.0f && currentIntersectionT < minThreatIntersectionT) {
+				minThreatIntersectionT = currentIntersectionT;
+				closestThreat = const_cast<Obstacle*>(&obstacle);
+				threatNormal = currentNormal;
+
+				// Capture visualization info
+				m_debug_closestThreatFound = true;
+				m_debug_intersectionPoint = m_detectionFeelerP1 + (m_detectionFeelerP2 - m_detectionFeelerP1) * minThreatIntersectionT;
+				m_debug_threatNormal = threatNormal;
+			}
+		}
+	}
+
+	// -- Calculate and Apply Avoidance Steering Force (if threat detected) --
+
+	// Reset desired velocity for this specific behavior before calculation
+	m_obstacleAvoidanceDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
+
+	if (closestThreat) {
+		// A. Calculate base components for steering
+		sf::Vector2f steeringForceNormalComponent = threatNormal; // Normal points outwards from obstacle
+		float urgencyFactor = (1.0f - minThreatIntersectionT);   // Closer = more urgent (0 to 1)
+
+		// B. Calculate Tangential Component for smoother sliding
+		sf::Vector2f steeringForceTangentComponent;
+		float velDotNormal = (velocityNormalised.x * threatNormal.x + velocityNormalised.y * threatNormal.y);
+		sf::Vector2f tangentProjection = velocityNormalised - (threatNormal * velDotNormal);
+
+		if (Utils::magnitude(tangentProjection) > 0.01f) {
+			steeringForceTangentComponent = Utils::normalised(tangentProjection);
+		}
+		else {
+			// If velocity is directly into normal, pick an arbitrary perpendicular tangent
+			steeringForceTangentComponent = sf::Vector2f(-threatNormal.y, threatNormal.x);
+		}
+
+		// C. Combine Normal and Tangential Forces
+		// TODO: Expose normalInfluence and tangentInfluence as member variables / slider controls
+		float normalInfluence = 4.0f;   // How much to push directly away
+		float tangentInfluence = 4.75f; // How much to encourage sliding
+
+		sf::Vector2f combinedSteeringDirection = (steeringForceNormalComponent * normalInfluence) +
+			(steeringForceTangentComponent * tangentInfluence);
+
+		if (Utils::magnitude(combinedSteeringDirection) > 0.01f) {
+			combinedSteeringDirection = Utils::normalised(combinedSteeringDirection);
+		}
+		else {
+			combinedSteeringDirection = threatNormal; // Fallback if combined direction is somehow zero
+		}
+		m_obstacleAvoidanceDesiredVelocity = combinedSteeringDirection * m_maxSpeed * urgencyFactor;
+
+		// D. Add Braking Component for head-on collisions
+		float dotProductVelNormal = velDotNormal; // Re-use earlier calculation
+		if (dotProductVelNormal < -0.8f && minThreatIntersectionT < 0.3f) { // Very head-on and very close
+			m_obstacleAvoidanceDesiredVelocity -= velocityNormalised * m_maxSpeed * urgencyFactor * 0.5f;
+		}
+
+		// E. Apply the final steering force
+		applySteeringFromDesiredVelocity(m_obstacleAvoidanceDesiredVelocity,
+			m_obstacleAvoidanceMaxSteeringForce,
+			m_obstacleAvoidanceStrength,
+			m_obstacleAvoidanceWeighting,
+			deltaTime);
+	}
+}
 
 // **=== Visualizations ===**
+void Agent::drawLine(sf::RenderTarget& window, const sf::Vector2f& start, const sf::Vector2f& end, const sf::Color& color) const
+{
+	sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+	line[0].position = start;
+	line[0].color = color;
+	line[1].position = end;
+	line[1].color = color;
+	window.draw(line);
+}
 
-void Agent::drawVisualizations(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const
+void Agent::drawCircle(sf::RenderTarget& window, const sf::Vector2f& position, float radius, const sf::Color& color) const
+{
+	sf::CircleShape circle(radius);
+	circle.setPosition(position);
+	circle.setOrigin({ radius, radius });
+	circle.setFillColor(color);
+	circle.setOutlineColor(color + color); // Make it a bit darker
+	circle.setOutlineThickness(1.0f);
+	window.draw(circle);
+}
+
+void Agent::drawVisualizations(sf::RenderTarget& window, const std::vector<Agent*>& allAgents) const
 {
 	// Draw visuals
 	//drawVelocityLine(target);
-	drawBehaviourVisuals(target, allAgents);
+	drawBehaviourVisuals(window, allAgents);
 }
-void Agent::drawVelocityLine(sf::RenderTarget& target) const
+void Agent::drawVelocityLine(sf::RenderTarget& window) const
 {
 	float length = 3.0f; // Length of the line
 
@@ -429,81 +598,40 @@ void Agent::drawVelocityLine(sf::RenderTarget& target) const
 	line[1].color = sf::Color::Red;
 
 	// Draw the line
-	target.draw(line);
+	window.draw(line);
 }
-void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const
+void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Agent*>& allAgents) const
 {
-	// -- Seek Desired Velocity Line --
+	// -- Seek Widget --
 	if (m_seekWeighting > 0.0f && m_behaviour == Behaviour::SEEK)
 	{
-		float length = 1.0f; // Length of the line
-		// Create a VertexArray for the line
-		sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-		// Set the starting point of the line (agnets position + a bit)
-		line[0].position = this->getPosition() + m_velocity * 0.2f;
-		line[0].color = sf::Color::Red;
-		// Set the end point of the line (position + velocity)
-		sf::Vector2f endPoint = this->getPosition() + m_seekDesiredVelocity * length;
-		line[1].position = endPoint;
-		line[1].color = sf::Color::Red;
-		// Draw the line
-		target.draw(line);
+		sf::Vector2f endPoint = this->getPosition() + m_seekDesiredVelocity * 1.0f;
+		drawLine(window, this->getPosition(), endPoint, sf::Color::Red);
 	}
-	// -- Flee Desired Velocity Line --
+	// -- Flee Widget --
 	if (m_fleeWeighting > 0.0f && m_behaviour == Behaviour::FLEE)
 	{
-		float length = 1.0f;
-		sf::VertexArray fleeLine(sf::PrimitiveType::Lines, 2);
-		fleeLine[0].position = this->getPosition() + m_velocity * 0.2f;
-		fleeLine[0].color = sf::Color::Blue;
-		sf::Vector2f fleeEndPoint = this->getPosition() + m_fleeDesiredVelocity * length;
-		fleeLine[1].position = fleeEndPoint;
-		fleeLine[1].color = sf::Color::Blue;
-		target.draw(fleeLine);
+		sf::Vector2f endPoint = this->getPosition() + m_fleeDesiredVelocity * 1.0f;
+		drawLine(window, this->getPosition(), endPoint, sf::Color::Blue);
 	}
 	// -- Wander Widget --
 	if (m_wanderWeighting > 0.0f && m_behaviour == Behaviour::WANDER)
 	{
 		// - Wander Circle -
-		sf::CircleShape circle(m_wanderRadius);
 		sf::Vector2f circlePos = this->getPosition() + Utils::normalised(m_velocity) * m_wanderDistance;
-		circle.setFillColor(sf::Color(20, 100, 20, 20));
-		circle.setPosition(circlePos);
-		circle.setOrigin({ m_wanderRadius, m_wanderRadius });
-		circle.setOutlineColor(sf::Color(20, 100, 20, 60));
-		circle.setOutlineThickness(1.0f);
-		target.draw(circle);
-
+		drawCircle(window, circlePos, m_wanderRadius, sf::Color(20, 100, 20, 20));
 		// - Wander Angle -
-		sf::VertexArray angleLine(sf::PrimitiveType::Lines, 2);
-		angleLine[0].position = circlePos;
-		angleLine[0].color = sf::Color::Green;
-		// Calculate the end point of the angle line
-		sf::Vector2f displacement_on_circle(
-			std::cos(m_wanderAngle) * m_wanderRadius,
-			std::sin(m_wanderAngle) * m_wanderRadius
-		);
-		sf::Vector2f angleEndPoint = circlePos + displacement_on_circle;
-		angleLine[1].position = angleEndPoint;
-		angleLine[1].color = sf::Color::Green;
-		target.draw(angleLine);
-
+		sf::Vector2f angleEndPoint = circlePos + sf::Vector2f(std::cos(m_wanderAngle), std::sin(m_wanderAngle)) * m_wanderRadius;
+		drawLine(window, circlePos, angleEndPoint, sf::Color::Green);
 		// - Turn Range -
 		// Max turn line
-		sf::VertexArray maxTurnLine(sf::PrimitiveType::Lines, 2);
-		maxTurnLine[0].position = circlePos;
-		maxTurnLine[0].color = sf::Color(20, 20, 100, 60);
-		maxTurnLine[1].position = circlePos + sf::Vector2f(std::cos(m_wanderAngle - m_wanderAngleRandomStrength) * m_wanderRadius, std::sin(m_wanderAngle - m_wanderAngleRandomStrength) * m_wanderRadius);
-		maxTurnLine[1].color = sf::Color(20, 20, 100, 60);
-		target.draw(maxTurnLine);
-
+		sf::Vector2f maxTurnLineEndPoint = circlePos + sf::Vector2f(std::cos(m_wanderAngle - m_wanderAngleRandomStrength) * m_wanderRadius, 
+			std::sin(m_wanderAngle - m_wanderAngleRandomStrength) * m_wanderRadius);
+		drawLine(window, circlePos, maxTurnLineEndPoint, sf::Color(20, 20, 100, 60));
 		// Min turn line
-		sf::VertexArray minTurnLine(sf::PrimitiveType::Lines, 2);
-		minTurnLine[0].position = circlePos;
-		minTurnLine[0].color = sf::Color(20, 20, 100, 60);
-		minTurnLine[1].position = circlePos + sf::Vector2f(std::cos(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius, std::sin(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius);
-		minTurnLine[1].color = sf::Color(20, 20, 100, 60);
-		target.draw(minTurnLine);
+		sf::Vector2f minTurnLineEndPoint = circlePos + sf::Vector2f(std::cos(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius,
+			std::sin(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius);
+		drawLine(window, circlePos, minTurnLineEndPoint, sf::Color(20, 20, 100, 60));
 	}
 	// -- Cohesion Widget --
 	if (m_cohesionWeighting > 0.0f && m_behaviour == Behaviour::FLOCKING)
@@ -511,32 +639,20 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 		// - Cohesion Lines towards center of mass -
 		for (const auto& agent : allAgents)
 		{
-			if (agent == this)
-			{
+			if (agent == this) { // Skip self
 				continue;
 			}
-			// Draw the line
-			sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-			line[0].position = this->getPosition();
-			line[0].color = sf::Color::Green;
-			line[1].position = m_cohesionCenterOfMass;
-			line[1].color = sf::Color::Green;
-			// if line too long, truncate
-			if (Utils::magnitude(line[1].position - line[0].position) > 40.0f)
-			{
-				line[1].position = line[0].position + Utils::normalised(line[1].position - line[0].position) * 40.0f;
-			}
-			target.draw(line);
-		}
 
+			sf::Vector2f EndPoint = m_cohesionCenterOfMass; // End point is center of mass
+			if (Utils::magnitude(EndPoint - this->getPosition()) > 40.0f) // Stop line from getting too long
+			{
+				EndPoint = this->getPosition() + Utils::normalised(EndPoint - this->getPosition()) * 40.0f;
+			}
+			drawLine(window, this->getPosition(), EndPoint, sf::Color::Green);
+		}
 		// - center of mass circles -
-		sf::CircleShape circle(5);
-		circle.setFillColor(sf::Color(20, 100, 20, 20));
-		circle.setPosition(m_cohesionCenterOfMass);
-		circle.setOrigin({ circle.getRadius(), circle.getRadius() });
-		target.draw(circle);
-		// Draw the center of mass
-		sf::CircleShape centerOfMassCircle(5.0f);
+		sf::Vector2f centerOfMassPos = m_cohesionCenterOfMass;
+		drawCircle(window, centerOfMassPos, 5.0f, sf::Color(20, 100, 20, 20));
 	}
 	// -- Alignment Widget --
 	if (m_alignmentWeighting > 0.0f && m_behaviour == Behaviour::FLOCKING)
@@ -548,18 +664,13 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 			{
 				continue; // Skip self
 			}
-			sf::Vector2f selfPos = this->getPosition();                 // Save own position
-			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agnets position
-			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
+
+			sf::Vector2f selfPos = this->getPosition();
+			sf::Vector2f otherAgentPos = agent->getPosition();
+			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance
 			if (distance < m_alignmentNeighbourhoodRadius)
 			{
-				// Draw the line
-				sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-				line[0].position = this->getPosition();
-				line[0].color = sf::Color(255, 165, 0);
-				line[1].position = otherAgentPos;
-				line[1].color = sf::Color(255, 165, 0);
-				target.draw(line);
+				drawLine(window, this->getPosition(), otherAgentPos, sf::Color(255, 165, 0));
 			}
 		}
 	}
@@ -573,18 +684,13 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 			{
 				continue; // Skip self
 			}
+
 			sf::Vector2f selfPos = this->getPosition();                 // Save own position
 			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agnets position
 			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
 			if (distance < m_separationNeighbourhoodRadius)
 			{
-				// Draw the line
-				sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-				line[0].position = this->getPosition();
-				line[0].color = sf::Color::Magenta;
-				line[1].position = otherAgentPos;
-				line[1].color = sf::Color::Magenta;
-				target.draw(line);
+				drawLine(window, this->getPosition(), otherAgentPos, sf::Color::Magenta);
 			}
 		}
 	}
@@ -592,27 +698,40 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 	if (m_pursuitWeighting > 0.0f && m_behaviour == Behaviour::PURSUIT)
 	{
 		// -- Line to Predicted Target --
-		float length = 1.0f;
-		sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-		line[0].position = this->getPosition() + m_velocity * 0.2f;
-		line[0].color = sf::Color::Red;
-		sf::Vector2f endPoint = this->getPosition() + m_pursuitDesiredVelocity * length;
-		line[1].position = endPoint;
-		line[1].color = sf::Color::Red;
-		target.draw(line);
+		sf::Vector2f endPoint = this->getPosition() + m_pursuitDesiredVelocity * 1.0f;
+		drawLine(window, this->getPosition(), endPoint, sf::Color::Red);
 	}
 	// -- Evasion Widget --
 	if (m_evasionWeighting > 0.0f && m_behaviour == Behaviour::EVASION)
 	{
-		// -- Line to Predicted Target --
-		float length = 1.0f;
-		sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-		line[0].position = this->getPosition() + m_velocity * 0.2f;
-		line[0].color = sf::Color::Blue;
-		sf::Vector2f endPoint = this->getPosition() + m_evasionDesiredVelocity * length;
-		line[1].position = endPoint;
-		line[1].color = sf::Color::Blue;
-		target.draw(line);
+		// -- Line to Evasion Target --
+		sf::Vector2f endPoint = this->getPosition() + m_evasionDesiredVelocity * 1.0f;
+		drawLine(window, this->getPosition(), endPoint, sf::Color::Blue);
+	}
+	// -- Obstacle Avoidance Widget --
+	if (m_obstacleAvoidanceWeighting > 0.0f && m_behaviour == Behaviour::OBSTACLE_AVOIDANCE)
+	{
+		// -- Draw the feeler line --
+		drawLine(window, m_detectionFeelerP1, m_detectionFeelerP2, sf::Color::Yellow);
+		// -- Draw ejection direction and ping agent if stuck --
+		if (m_debug_isUnsticking) {
+			// Draw the unstick direction
+			sf::Vector2f unstickEndPoint = getPosition() + m_debug_unstickDirection * 50.0f;
+			drawLine(window, getPosition(), unstickEndPoint, sf::Color::Red); // Draw unstick direction
+			// Ping the agent
+			drawCircle(window, getPosition(), 2.0f, sf::Color::Red);
+		}
+		// -- Draw intersection point and normals if threat found --
+		else if (m_debug_closestThreatFound) {
+			// Draw the intersection point
+			drawCircle(window, m_debug_intersectionPoint, 4.0f, sf::Color::Red);
+			// Draw the normal at the intersection point
+			sf::Vector2f normalEndPoint = m_debug_intersectionPoint + m_debug_threatNormal * 30.0f;
+			drawLine(window, m_debug_intersectionPoint, normalEndPoint, sf::Color::Cyan);
+			// Draw final avoidance velocity line
+			sf::Vector2f endPoint = this->getPosition() + m_obstacleAvoidanceDesiredVelocity * 1.0f;
+			drawLine(window, this->getPosition(), endPoint, sf::Color::Black);
+		}
 	}
 }
 

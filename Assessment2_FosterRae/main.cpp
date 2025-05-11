@@ -18,6 +18,7 @@
 #include "Agent.h"
 #include <memory>
 #include <vector>
+#include "Obstacle.h"
 
 int main()
 {
@@ -39,6 +40,13 @@ int main()
 		return EXIT_FAILURE;
 	}
 	Agent* firstAgent = agents[0];
+
+	// **=== Obstacle Creation ===**
+	std::vector<Obstacle> obstacles;
+	obstacles.emplace_back(Obstacle(sf::Vector2f(200.f, 150.f), sf::Vector2f(100.f, 80.f)));
+	obstacles.emplace_back(Obstacle(sf::Vector2f(500.f, 400.f), sf::Vector2f(120.f, 60.f)));
+	obstacles.emplace_back(Obstacle(sf::Vector2f(800.f, 250.f), sf::Vector2f(70.f, 70.f)));
+
 
 	// **=== UI Setup ===**
 
@@ -107,6 +115,13 @@ int main()
 	addSlider(0.0f, 1.0f, firstAgent->getEvasionWeighting(), "Evasion Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getEvasionStrength(), "Evasion Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getEvasionMaxSteeringForce(), "Evasion Max Force: ");
+	// --- Obstacle Avoidance Sliders ---
+	sliderStartY = 55.0f;
+	addSlider(0.0f, 1.0f, firstAgent->getObstacleAvoidanceWeighting(), "Obstacle Avoidance Weighting: ");
+	addSlider(0.0f, 10.0f, firstAgent->getObstacleAvoidanceStrength(), "Obstacle Avoidance Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getObstacleAvoidanceMaxSteeringForce(), "Obstacle Avoidance Max Force: ");
+	addSlider(0.0f, 200.0f, firstAgent->getObstacleDetectionBoxLength(), "Obstacle Detection Length: ");
+
 	bool showVisualizations = false;
 
     // **=== Game Loop ===**
@@ -156,6 +171,11 @@ int main()
 		sliders[26]->setVisible(currentBehaviour == Behaviour::EVASION);
 		sliders[27]->setVisible(currentBehaviour == Behaviour::EVASION);
 		sliders[28]->setVisible(currentBehaviour == Behaviour::EVASION);
+
+		sliders[29]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
+		sliders[30]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
+		sliders[31]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
+		sliders[32]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
 
 		while (const std::optional event = window.pollEvent())
 		{
@@ -254,6 +274,20 @@ int main()
 						}
 					}
 				}
+				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num7) {
+					// If already in obstacle avoidance change to none
+					if (firstAgent->getBehaviour() == Behaviour::OBSTACLE_AVOIDANCE) {
+						for (auto& agent : agents) {
+							agent->setBehaviour(Behaviour::NONE);
+						}
+					}
+					else {
+						// Change to obstacle avoidance behaviour
+						for (auto& agent : agents) {
+							agent->setBehaviour(Behaviour::OBSTACLE_AVOIDANCE);
+						}
+					}
+				}
 			}
 
 			// **=== UI Interaction ===**
@@ -316,6 +350,10 @@ int main()
 		float currentEvasionStrength = sliders[27]->getValue();
 		float currentEvasionMaxSteeringForce = sliders[28]->getValue();
 
+		float currentObstacleAvoidanceWeighting = sliders[29]->getValue();
+		float currentObstacleAvoidanceStrength = sliders[30]->getValue();
+		float currentObstacleAvoidanceMaxSteeringForce = sliders[31]->getValue();
+		float currentObstacleDetectionBoxLength = sliders[32]->getValue();
 
 		// Update agents
 		for (auto& agent : agents)
@@ -359,11 +397,21 @@ int main()
 			agent->setEvasionStrength(currentEvasionStrength);
 			agent->setEvasionMaxSteeringForce(currentEvasionMaxSteeringForce);
 
-			agent->update(dtSeconds, window, agents);
+			agent->setObstacleAvoidanceWeighting(currentObstacleAvoidanceWeighting);
+			agent->setObstacleAvoidanceStrength(currentObstacleAvoidanceStrength);
+			agent->setObstacleAvoidanceMaxSteeringForce(currentObstacleAvoidanceMaxSteeringForce);
+			agent->setObstacleDetectionBoxLength(currentObstacleDetectionBoxLength);
+
+			agent->update(dtSeconds, window, agents, obstacles);
 		}
 
 		// **=== Rendering ===**
 		window.clear(sf::Color::White);
+
+		// Draw obstacles
+		for (const Obstacle& obs : obstacles) {
+			obs.draw(window);
+		}
 
 		// Draw all agents
 		for (Agent* agent : agents)
@@ -378,6 +426,7 @@ int main()
 				agent->drawVisualizations(window, agents); // Draw the agent's visualizations
 			}
 		}
+	    
 		// Draw sliders
 		for (auto& slider_ptr : sliders) {
 			if (slider_ptr->getIsVisible()) {

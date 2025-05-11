@@ -14,6 +14,8 @@
 // **=== Includes ===**
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "Obstacle.h"
+#include <vector>
 
 // Behaviour enum
 enum class Behaviour
@@ -24,7 +26,8 @@ enum class Behaviour
 	WANDER,
 	FLOCKING,
 	PURSUIT,
-	EVASION
+	EVASION,
+	OBSTACLE_AVOIDANCE
 };
 
 class Agent : public sf::Drawable, public sf::Transformable // Inherit from sf::Drawable & sf::Transformable
@@ -40,7 +43,9 @@ public:
 
 	// **=== Public Methods ===**
 
-	void update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents);
+	void update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents, const std::vector<Obstacle>& obstacles);
+	void drawLine(sf::RenderTarget& window, const sf::Vector2f& start, const sf::Vector2f& end, const sf::Color& color) const;
+	void drawCircle(sf::RenderTarget& window, const sf::Vector2f& position, float radius, const sf::Color& color) const;
 	void drawVisualizations(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const;
 
 	// -- Setters --
@@ -92,6 +97,11 @@ public:
 	void setEvasionStrength(float strength) { m_evasionStrength = strength; }
 	void setEvasionTarget(Agent* target) { m_evasionTarget = target; }
 
+	void setObstacleAvoidanceWeighting(float weighting) { m_obstacleAvoidanceWeighting = weighting; }
+	void setObstacleAvoidanceMaxSteeringForce(float force) { m_obstacleAvoidanceMaxSteeringForce = force; }
+	void setObstacleAvoidanceStrength(float strength) { m_obstacleAvoidanceStrength = strength; }
+	void setObstacleDetectionBoxLength(float length) { m_obstacleDetectionBoxLength = length; }
+
 	// -- Getters --
 
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
@@ -140,6 +150,11 @@ public:
 	float getEvasionMaxSteeringForce() const { return m_evasionMaxSteeringForce; }
 	float getEvasionStrength() const { return m_evasionStrength; }
 	const sf::Vector2f& getEvasionTargetPosition() const { return m_evasionTarget->getPosition(); }
+
+	float getObstacleAvoidanceWeighting() const { return m_obstacleAvoidanceWeighting; }
+	float getObstacleAvoidanceMaxSteeringForce() const { return m_obstacleAvoidanceMaxSteeringForce; }
+	float getObstacleAvoidanceStrength() const { return m_obstacleAvoidanceStrength; }
+	float getObstacleDetectionBoxLength() const { return m_obstacleDetectionBoxLength; }
 
 
 private:
@@ -211,7 +226,19 @@ private:
 	float m_evasionMaxSteeringForce;
 	float m_evasionStrength;
 	Agent* m_evasionTarget;
-
+	// Obstacle avoidance
+	float m_obstacleAvoidanceWeighting;
+	sf::Vector2f m_obstacleAvoidanceDesiredVelocity;
+	float m_obstacleAvoidanceMaxSteeringForce;
+	float m_obstacleAvoidanceStrength;
+	float m_obstacleDetectionBoxLength; // How far ahead the agent looks
+	sf::Vector2f m_detectionFeelerP1;
+	sf::Vector2f m_detectionFeelerP2;
+	bool m_debug_closestThreatFound;
+	sf::Vector2f m_debug_intersectionPoint;
+	sf::Vector2f m_debug_threatNormal;
+	bool m_debug_isUnsticking;
+	sf::Vector2f m_debug_unstickDirection;
 	// **=== Private Methods ===**
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method
@@ -240,5 +267,6 @@ private:
 	void alignment(float deltaTime, const std::vector<Agent*>& allAgents);
 	void pursuit(float deltaTime, const std::vector<Agent*>& allAgents);
 	void evasion(float deltaTime, const std::vector<Agent*>& allAgents);
+	void obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obstacles);
 };
 

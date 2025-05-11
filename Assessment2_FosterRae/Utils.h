@@ -48,4 +48,17 @@ namespace Utils
      * @return A random float between min and max.
      */
     float randomRange(float min, float max);
+
+    /**
+	 * @brief Checks if a line segment intersects with an Axis-Aligned Bounding Box (AABB).
+	 * @param lineP1 Point 1 of the line segment.
+	 * @param lineP2 Point 2 of the line segment.
+	 * @param rectMin The minimum corner of the AABB (top-left).
+	 * @param rectMax The maximum corner of the AABB (bottom-right).
+	 * @param tIntersection How far along the line the intersection occurs (0.0 to 1.0), passed by reference to have access to the value.
+	 * @param outIntersectionNormal The normal vector at the intersection point.
+	 * @return True if the line intersects the AABB, false otherwise.
+     */
+    bool lineIntersectsAABB(const sf::Vector2f& lineP1, const sf::Vector2f& lineP2, const sf::Vector2f& rectMin,
+        const sf::Vector2f & rectMax, float& tIntersection, sf::Vector2f& outIntersectionNormal);
 }

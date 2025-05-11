@@ -137,11 +137,13 @@
   <ItemGroup>
     <ClCompile Include="Agent.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Obstacle.cpp" />
     <ClCompile Include="Slider.cpp" />
     <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Agent.h" />
+    <ClInclude Include="Obstacle.h" />
     <ClInclude Include="Slider.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
