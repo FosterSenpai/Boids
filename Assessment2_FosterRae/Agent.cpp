@@ -47,18 +47,18 @@ Agent::Agent(sf::Vector2f& spawnPos)
 
 	m_flockingWeighting(0.0f),
 
-	m_cohesionWeighting(0.0f),
+	m_cohesionWeighting(0.2f),
 	m_cohesionMaxSteeringForce(5.0f),
 	m_cohesionStrength(2.0f),
 	m_cohesionNeighbourhoodRadius(100.0f),
 	m_cohesionIncludesSelf(false),
 
-	m_separationWeighting(1.0f),
+	m_separationWeighting(0.5f),
 	m_separationMaxSteeringForce(3.0f),
 	m_separationStrength(2.0f),
-	m_separationNeighbourhoodRadius(50.0f),
+	m_separationNeighbourhoodRadius(30.0f),
 
-	m_alignmentWeighting(0.0f),
+	m_alignmentWeighting(0.2f),
 	m_alignmentMaxSteeringForce(5.0f),
 	m_alignmentStrength(2.0f),
 	m_alignmentNeighbourhoodRadius(50.0f),
@@ -434,54 +434,50 @@ void Agent::drawVelocityLine(sf::RenderTarget& target) const
 void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const
 {
 	// -- Seek Desired Velocity Line --
-	if (m_seekWeighting > 0.0f)
+	if (m_seekWeighting > 0.0f && m_behaviour == Behaviour::SEEK)
 	{
-		float length = 3.0f; // Length of the line
+		float length = 1.0f; // Length of the line
 		// Create a VertexArray for the line
 		sf::VertexArray line(sf::PrimitiveType::Lines, 2);
 		// Set the starting point of the line (agnets position + a bit)
 		line[0].position = this->getPosition() + m_velocity * 0.2f;
-		line[0].color = sf::Color::Green;
+		line[0].color = sf::Color::Red;
 		// Set the end point of the line (position + velocity)
 		sf::Vector2f endPoint = this->getPosition() + m_seekDesiredVelocity * length;
 		line[1].position = endPoint;
-		line[1].color = sf::Color::Green;
+		line[1].color = sf::Color::Red;
 		// Draw the line
 		target.draw(line);
 	}
 	// -- Flee Desired Velocity Line --
-	if (m_fleeWeighting > 0.0f)
+	if (m_fleeWeighting > 0.0f && m_behaviour == Behaviour::FLEE)
 	{
-		float length = 3.0f; // Length of the line
-		// Create a VertexArray for the line
+		float length = 1.0f;
 		sf::VertexArray fleeLine(sf::PrimitiveType::Lines, 2);
-		// Set the starting point of the line (agnets position + a bit)
 		fleeLine[0].position = this->getPosition() + m_velocity * 0.2f;
 		fleeLine[0].color = sf::Color::Blue;
-		// Set the end point of the line (position + velocity)
 		sf::Vector2f fleeEndPoint = this->getPosition() + m_fleeDesiredVelocity * length;
 		fleeLine[1].position = fleeEndPoint;
 		fleeLine[1].color = sf::Color::Blue;
-		// Draw the line
 		target.draw(fleeLine);
 	}
 	// -- Wander Widget --
-	if (m_wanderWeighting > 0.0f)
+	if (m_wanderWeighting > 0.0f && m_behaviour == Behaviour::WANDER)
 	{
 		// - Wander Circle -
 		sf::CircleShape circle(m_wanderRadius);
 		sf::Vector2f circlePos = this->getPosition() + Utils::normalised(m_velocity) * m_wanderDistance;
-		circle.setFillColor(sf::Color(100, 20, 20, 20));
+		circle.setFillColor(sf::Color(20, 100, 20, 20));
 		circle.setPosition(circlePos);
 		circle.setOrigin({ m_wanderRadius, m_wanderRadius });
-		circle.setOutlineColor(sf::Color(100, 20, 20, 60));
+		circle.setOutlineColor(sf::Color(20, 100, 20, 60));
 		circle.setOutlineThickness(1.0f);
 		target.draw(circle);
 
 		// - Wander Angle -
 		sf::VertexArray angleLine(sf::PrimitiveType::Lines, 2);
 		angleLine[0].position = circlePos;
-		angleLine[0].color = sf::Color::Yellow;
+		angleLine[0].color = sf::Color::Green;
 		// Calculate the end point of the angle line
 		sf::Vector2f displacement_on_circle(
 			std::cos(m_wanderAngle) * m_wanderRadius,
@@ -489,38 +485,87 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 		);
 		sf::Vector2f angleEndPoint = circlePos + displacement_on_circle;
 		angleLine[1].position = angleEndPoint;
-		angleLine[1].color = sf::Color::Yellow;
+		angleLine[1].color = sf::Color::Green;
 		target.draw(angleLine);
 
 		// - Turn Range -
 		// Max turn line
 		sf::VertexArray maxTurnLine(sf::PrimitiveType::Lines, 2);
 		maxTurnLine[0].position = circlePos;
-		maxTurnLine[0].color = sf::Color::Blue;
+		maxTurnLine[0].color = sf::Color(20, 20, 100, 60);
 		maxTurnLine[1].position = circlePos + sf::Vector2f(std::cos(m_wanderAngle - m_wanderAngleRandomStrength) * m_wanderRadius, std::sin(m_wanderAngle - m_wanderAngleRandomStrength) * m_wanderRadius);
-		maxTurnLine[1].color = sf::Color::Blue;
+		maxTurnLine[1].color = sf::Color(20, 20, 100, 60);
 		target.draw(maxTurnLine);
 
 		// Min turn line
 		sf::VertexArray minTurnLine(sf::PrimitiveType::Lines, 2);
 		minTurnLine[0].position = circlePos;
-		minTurnLine[0].color = sf::Color::Blue;
+		minTurnLine[0].color = sf::Color(20, 20, 100, 60);
 		minTurnLine[1].position = circlePos + sf::Vector2f(std::cos(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius, std::sin(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius);
-		minTurnLine[1].color = sf::Color::Blue;
+		minTurnLine[1].color = sf::Color(20, 20, 100, 60);
 		target.draw(minTurnLine);
 	}
-	// -- Separation Widget --
-	if (m_separationWeighting > 0.0f)
+	// -- Cohesion Widget --
+	if (m_cohesionWeighting > 0.0f && m_behaviour == Behaviour::FLOCKING)
 	{
-		// - Separation Circle -
-		//sf::CircleShape separationCircle(m_separationNeighbourhoodRadius);
-		//separationCircle.setFillColor(sf::Color(100, 100, 100, 0));
-		//separationCircle.setPosition(this->getPosition());
-		//separationCircle.setOrigin({ m_separationNeighbourhoodRadius, m_separationNeighbourhoodRadius });
-		//separationCircle.setOutlineColor(sf::Color(100, 100, 100, 20));
-		//separationCircle.setOutlineThickness(1.0f);
-		//target.draw(separationCircle);
+		// - Cohesion Lines towards center of mass -
+		for (const auto& agent : allAgents)
+		{
+			if (agent == this)
+			{
+				continue;
+			}
+			// Draw the line
+			sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+			line[0].position = this->getPosition();
+			line[0].color = sf::Color::Green;
+			line[1].position = m_cohesionCenterOfMass;
+			line[1].color = sf::Color::Green;
+			// if line too long, truncate
+			if (Utils::magnitude(line[1].position - line[0].position) > 40.0f)
+			{
+				line[1].position = line[0].position + Utils::normalised(line[1].position - line[0].position) * 40.0f;
+			}
+			target.draw(line);
+		}
 
+		// - center of mass circles -
+		sf::CircleShape circle(5);
+		circle.setFillColor(sf::Color(20, 100, 20, 20));
+		circle.setPosition(m_cohesionCenterOfMass);
+		circle.setOrigin({ circle.getRadius(), circle.getRadius() });
+		target.draw(circle);
+		// Draw the center of mass
+		sf::CircleShape centerOfMassCircle(5.0f);
+	}
+	// -- Alignment Widget --
+	if (m_alignmentWeighting > 0.0f && m_behaviour == Behaviour::FLOCKING)
+	{
+		// - 'Aligning to' line -
+		for (const auto& agent : allAgents)
+		{
+			if (agent == this)
+			{
+				continue; // Skip self
+			}
+			sf::Vector2f selfPos = this->getPosition();                 // Save own position
+			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agnets position
+			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
+			if (distance < m_alignmentNeighbourhoodRadius)
+			{
+				// Draw the line
+				sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+				line[0].position = this->getPosition();
+				line[0].color = sf::Color(255, 165, 0);
+				line[1].position = otherAgentPos;
+				line[1].color = sf::Color(255, 165, 0);
+				target.draw(line);
+			}
+		}
+	}
+	// -- Separation Widget --
+	if (m_separationWeighting > 0.0f && m_behaviour == Behaviour::FLOCKING)
+	{
 		// - Separation Lines -
 		for (const auto& agent : allAgents)
 		{
@@ -543,58 +588,32 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 			}
 		}
 	}
-	// -- Cohesion Widget --
-	if (m_cohesionWeighting > 0.0f)
-	{
-
-		// - Cohesion Lines to Center of Mass -
-		for (const auto& agent : allAgents)
-		{
-			if (agent == this)
-			{
-				continue; // Skip self
-			}
-			sf::Vector2f selfPos = this->getPosition();                 // Save own position
-			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agnets position
-			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
-			if (distance < m_cohesionNeighbourhoodRadius)
-			{
-				// Draw the line
-				sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-				line[0].position = this->getPosition();
-				line[0].color = sf::Color::Cyan;
-				line[1].position = m_cohesionCenterOfMass;
-				line[1].color = sf::Color::Cyan;
-				target.draw(line);
-			}
-		}
-	}
-	// -- Alignment Widget --
-	if (m_alignmentWeighting > 0.0f)
-	{
-		// - 'Aligning to' line -
-		for (const auto& agent : allAgents)
-		{
-			if (agent == this)
-			{
-				continue; // Skip self
-			}
-			sf::Vector2f selfPos = this->getPosition();                 // Save own position
-			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agnets position
-			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
-			if (distance < m_alignmentNeighbourhoodRadius)
-			{
-				// Draw the line
-				sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-				line[0].position = this->getPosition();
-				line[0].color = sf::Color::Cyan;
-				line[1].position = otherAgentPos;
-				line[1].color = sf::Color::Cyan;
-				target.draw(line);
-			}
-		}
-	}
 	// -- Pursuit Widget --
+	if (m_pursuitWeighting > 0.0f && m_behaviour == Behaviour::PURSUIT)
+	{
+		// -- Line to Predicted Target --
+		float length = 1.0f;
+		sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+		line[0].position = this->getPosition() + m_velocity * 0.2f;
+		line[0].color = sf::Color::Red;
+		sf::Vector2f endPoint = this->getPosition() + m_pursuitDesiredVelocity * length;
+		line[1].position = endPoint;
+		line[1].color = sf::Color::Red;
+		target.draw(line);
+	}
+	// -- Evasion Widget --
+	if (m_evasionWeighting > 0.0f && m_behaviour == Behaviour::EVASION)
+	{
+		// -- Line to Predicted Target --
+		float length = 1.0f;
+		sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+		line[0].position = this->getPosition() + m_velocity * 0.2f;
+		line[0].color = sf::Color::Blue;
+		sf::Vector2f endPoint = this->getPosition() + m_evasionDesiredVelocity * length;
+		line[1].position = endPoint;
+		line[1].color = sf::Color::Blue;
+		target.draw(line);
+	}
 }
 
 
