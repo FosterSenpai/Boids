@@ -25,6 +25,7 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_velocity(0.0f, 0.0f),
 	m_agentSize(5.0f, 7.0f),
 	m_speedMultiplier(15.0f),
+	m_behaviour(Behaviour::NONE),
 
 	m_seekWeighting(0.0f),
 	m_seekMaxSteeringForce(5.0f),
@@ -50,7 +51,7 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_cohesionMaxSteeringForce(5.0f),
 	m_cohesionStrength(2.0f),
 	m_cohesionNeighbourhoodRadius(100.0f),
-	m_cohesionIncludesSelf(true),
+	m_cohesionIncludesSelf(false),
 
 	m_separationWeighting(1.0f),
 	m_separationMaxSteeringForce(3.0f),
@@ -82,10 +83,7 @@ Agent::Agent(sf::Vector2f& spawnPos)
 
 void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents)
 {
-    //----------------------------------------------------------------
-    // STEERING BEHAVIOURS
-    //----------------------------------------------------------------
-
+	// -- Update Agent Behaviour --
 	seek(deltaTime);
 	flee(deltaTime);
 	wander(deltaTime);
@@ -96,10 +94,6 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 
 	pursuit(deltaTime, allAgents);
 	evasion(deltaTime, allAgents);
-
-    //----------------------------------------------------------------
-    // MOVEMENT & PHYSICS
-    //----------------------------------------------------------------
 
     // -- Update Agent Position --
     this->setPosition(this->getPosition() + m_velocity * m_speedMultiplier * deltaTime); // Update position based on velocity
@@ -304,7 +298,6 @@ void Agent::cohesion(float deltaTime, const std::vector<Agent*>& allAgents)
 		applySteeringFromDesiredVelocity(m_cohesionDesiredVelocity, m_cohesionMaxSteeringForce, m_cohesionStrength, m_cohesionWeighting, deltaTime);
 	}
 }
-
 void Agent::alignment(float deltaTime, const std::vector<Agent*>& allAgents)
 {
 	sf::Vector2f selfPos = this->getPosition(); // Save own position
@@ -340,7 +333,6 @@ void Agent::alignment(float deltaTime, const std::vector<Agent*>& allAgents)
 		applySteeringFromDesiredVelocity(m_alignmentDesiredVelocity, m_alignmentMaxSteeringForce, m_alignmentStrength, m_alignmentWeighting, deltaTime);
 	}
 }
-
 void Agent::pursuit(float deltaTime, const std::vector<Agent*>& allAgents)
 {
 	// Set target to the first agent in the list
@@ -364,7 +356,6 @@ void Agent::pursuit(float deltaTime, const std::vector<Agent*>& allAgents)
 		return;
 	}
 
-
 	m_pursuitTarget->setColor(sf::Color::Red); // Set target color to red for visualization
 
 	sf::Vector2f targetPos = m_pursuitTarget->getPosition(); // Get target position
@@ -378,7 +369,6 @@ void Agent::pursuit(float deltaTime, const std::vector<Agent*>& allAgents)
 	// Update Steering Force
 	applySteeringFromDesiredVelocity(m_pursuitDesiredVelocity, m_pursuitMaxSteeringForce, m_pursuitStrength, m_pursuitWeighting, deltaTime);
 }
-
 void Agent::evasion(float deltaTime, const std::vector<Agent*>& allAgents)
 { // TODO: Maybe add radius check so agents only evade when target close
 	// Set target to the first agent in the list
@@ -579,7 +569,6 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 			}
 		}
 	}
-
 	// -- Alignment Widget --
 	if (m_alignmentWeighting > 0.0f)
 	{
@@ -605,6 +594,7 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 			}
 		}
 	}
+	// -- Pursuit Widget --
 }
 
 

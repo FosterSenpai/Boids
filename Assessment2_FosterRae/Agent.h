@@ -15,6 +15,18 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
+// Behaviour enum
+enum class Behaviour
+{
+	NONE,
+	SEEK,
+	FLEE,
+	WANDER,
+	FLOCKING,
+	PURSUIT,
+	EVASION
+};
+
 class Agent : public sf::Drawable, public sf::Transformable // Inherit from sf::Drawable & sf::Transformable
 {
 public:
@@ -27,13 +39,16 @@ public:
 	Agent(sf::Vector2f& spawnPos);
 
 	// **=== Public Methods ===**
+
 	void update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents);
 	void drawVisualizations(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const;
 
 	// -- Setters --
+
 	void setTargetPosition(const sf::Vector2f& position) { m_target.setPosition(position); }
 	void setSpeed(float speed) { m_speedMultiplier = speed; }
 	void setColor(const sf::Color& color) { m_shape.setFillColor(color); }
+	void setBehaviour(Behaviour behaviour) { m_behaviour = behaviour; }
 
 	void setSeekWeighting(float weighting) { m_seekWeighting = weighting; }
 	void setSeekMaxSteeringForce(float force) { m_seekMaxSteeringForce = force; }
@@ -78,9 +93,11 @@ public:
 	void setEvasionTarget(Agent* target) { m_evasionTarget = target; }
 
 	// -- Getters --
+
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
 	float getSpeed() const { return m_speedMultiplier; }
 	const sf::Vector2f& getVelocity() const { return m_velocity; }
+	const Behaviour& getBehaviour() const { return m_behaviour; }
 
 	float getSeekWeighting() const { return m_seekWeighting; }
 	float getSeekMaxSteeringForce() const { return m_seekMaxSteeringForce; }
@@ -122,13 +139,14 @@ public:
 	float getEvasionWeighting() const { return m_evasionWeighting; }
 	float getEvasionMaxSteeringForce() const { return m_evasionMaxSteeringForce; }
 	float getEvasionStrength() const { return m_evasionStrength; }
-	const sf::Vector2f& getEvasionTargetPosition() const { return m_evasionTarget->getPosition(); } // Get the target position for evasion
+	const sf::Vector2f& getEvasionTargetPosition() const { return m_evasionTarget->getPosition(); }
 
 
 private:
 	// **=== Private Members ===**
 	float m_maxSpeed;
-	float m_speedMultiplier; // Speed multiplier for the agent
+	float m_speedMultiplier;
+	Behaviour m_behaviour;
 
 	sf::Transformable m_target;
 	sf::Vector2f m_velocity;
@@ -194,8 +212,8 @@ private:
 	float m_evasionStrength;
 	Agent* m_evasionTarget;
 
-
 	// **=== Private Methods ===**
+
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method
 	void setupShape(); 
 
@@ -206,10 +224,12 @@ private:
 	void handleBoundary(const sf::RenderWindow& window);
 
 	// **=== Visualizations ===**
+
 	void drawVelocityLine(sf::RenderTarget& target) const;
 	void drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const;
 
 	// **=== Steering Behaviours ===**
+
 	void applySteeringFromDesiredVelocity(const sf::Vector2f& desiredVelocity, float maxSteeringForce, float strength, float weighting, float deltaTime);
 	void applySteeringFromForce(sf::Vector2f force, float maxSteeringForce, float strength, float weighting, float deltaTime);
 	void seek(float deltaTime);

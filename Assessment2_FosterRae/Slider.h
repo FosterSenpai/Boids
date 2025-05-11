@@ -77,6 +77,9 @@ public:
      */
     void updateText();
 
+	void setVisible(bool visible) { m_isVisible = visible; } // Set visibility of the slider
+	bool getIsVisible() const { return m_isVisible; }        // Get visibility of the slider
+
 private:
     // **=== Private Methods ===**
 
@@ -89,7 +92,7 @@ private:
 
     sf::RectangleShape m_track;       // The slider track (positioned locally at 0,0)
     sf::RectangleShape m_handle;      // The draggable handle (positioned locally relative to track)
-	const sf::Font& m_font;       // Font reference for text display
+	const sf::Font& m_font;           // Font reference for text display
     sf::Text m_valueText;             // Displays the current value + label (positioned locally)
 
     sf::Vector2f m_size;              // Size of the slider track
@@ -102,4 +105,5 @@ private:
 
     sf::RenderWindow* m_window;       // Pointer to the window (needed for coordinate mapping)
     std::string m_labelPrefix;        // Label prefix for the text display
+	bool m_isVisible;                 // Flag: True if the slider is visible
 };
