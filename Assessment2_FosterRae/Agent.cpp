@@ -28,19 +28,19 @@ Agent::Agent(sf::Vector2f& spawnPos)
 
 	m_seekWeighting(0.0f),
 	m_seekMaxSteeringForce(5.0f),
-	m_seekStrength(10.0f),
+	m_seekStrength(2.0f),
 
 	m_fleeWeighting(0.0f),
 	m_fleeMaxSteeringForce(5.0f),
-	m_fleeStrength(10.0f),
+	m_fleeStrength(2.0f),
 
 	m_wanderWeighting(0.2f),
 	m_wanderMaxSteeringForce(5.0f),
-	m_wanderStrength(10.0f),
+	m_wanderStrength(2.0f),
 	m_wanderRadius(15.0f),
-	m_wanderDistance(25.0f),
+	m_wanderDistance(35.0f),
 	m_wanderAngle(0.0f),
-	m_wanderAngleRandomStrength(0.5f),
+	m_wanderAngleRandomStrength(0.3f),
 	m_wanderAdjustmentTimer(0.0f),
 	m_targetWanderAngle(0.0f),
 
@@ -48,20 +48,21 @@ Agent::Agent(sf::Vector2f& spawnPos)
 
 	m_cohesionWeighting(0.0f),
 	m_cohesionMaxSteeringForce(5.0f),
-	m_cohesionStrength(10.0f),
-	m_cohesionNeighbourhoodRadius(50.0f),
+	m_cohesionStrength(2.0f),
+	m_cohesionNeighbourhoodRadius(100.0f),
+	m_cohesionIncludesSelf(true),
 
 	m_separationWeighting(1.0f),
 	m_separationMaxSteeringForce(3.0f),
-	m_separationStrength(10.0f),
+	m_separationStrength(2.0f),
 	m_separationNeighbourhoodRadius(50.0f),
 
 	m_alignmentWeighting(0.0f),
 	m_alignmentMaxSteeringForce(5.0f),
-	m_alignmentStrength(10.0f),
+	m_alignmentStrength(2.0f),
 	m_alignmentNeighbourhoodRadius(50.0f)
 {
-	this->setPosition(spawnPos);    // Set the agent's position to spawn position
+	this->setPosition(spawnPos);    // Set the agnets position to spawn position
 	m_target.setPosition(spawnPos); // set for now, gets overridden in update
 	setupShape();                   // Setup the shape of the agent
 }
@@ -74,26 +75,12 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
     // STEERING BEHAVIOURS
     //----------------------------------------------------------------
 
-	// Seek
-	if (m_seekWeighting > 0.0f) 
-	{
-		seek(deltaTime);
-	}
-	// Flee
-	if (m_fleeWeighting > 0.0f)
-	{
-		flee(deltaTime);
-	}
-	// Wander
-	if (m_wanderWeighting > 0.0f)
-	{
-		wander(deltaTime);
-	}
-	// Separate
-	if (m_separationWeighting > 0.0f)
-	{
-		separate(deltaTime, allAgents);
-	}
+	seek(deltaTime);
+	flee(deltaTime);
+	wander(deltaTime);
+
+	separate(deltaTime, allAgents);
+	cohesion(deltaTime, allAgents);
 
     //----------------------------------------------------------------
     // MOVEMENT & PHYSICS
@@ -114,7 +101,7 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 }
 void Agent::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
-	states.transform *= getTransform(); // Apply the agent's entire current transform
+	states.transform *= getTransform(); // Apply the agnets entire current transform
 	target.draw(m_shape, states);       // Draw the pre-configured shape
 }
 void Agent::setupShape()
@@ -158,7 +145,6 @@ void Agent::applySteeringFromDesiredVelocity(const sf::Vector2f& desiredVelocity
 	// Apply the steering force
 	applySteeringFromForce(steerForce, maxSteeringForce, strength, weighting, deltaTime);
 }
-
 void Agent::applySteeringFromForce(sf::Vector2f force, float maxSteeringForce, float strength, float weighting, float deltaTime)
 {
 	// Truncate the force to the max steering force
@@ -167,25 +153,43 @@ void Agent::applySteeringFromForce(sf::Vector2f force, float maxSteeringForce, f
 	m_velocity += force * strength * weighting * deltaTime;
 	m_velocity = Utils::truncate(m_velocity, m_maxSpeed);
 }
-
 void Agent::seek(float deltaTime)
 {
+	// If behaviour has no weight dont do calculations
+	if (m_seekWeighting <= 0.0f)
+	{
+		m_seekDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		return;
+	}
+
 	// Calc desired velocity seek(target position - current position) 
 	m_seekDesiredVelocity = Utils::normalised(m_target.getPosition() - this->getPosition()) * m_maxSpeed;
 	// Update Steering Force
 	applySteeringFromDesiredVelocity(m_seekDesiredVelocity, m_seekMaxSteeringForce, m_seekStrength, m_seekWeighting, deltaTime);
 }
-
 void Agent::flee(float deltaTime) 
 {
+	// If behaviour has no weight dont do calculations
+	if (m_fleeWeighting <= 0.0f)
+	{
+		m_fleeDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		return;
+	}
+
 	// Calc desired velocity flee(target position - current position) 
 	m_fleeDesiredVelocity = Utils::normalised(this->getPosition() - m_target.getPosition()) * m_maxSpeed;
 	// Update Steering Force
 	applySteeringFromDesiredVelocity(m_fleeDesiredVelocity, m_fleeMaxSteeringForce, m_fleeStrength, m_fleeWeighting, deltaTime);
 }
-
 void Agent::wander(float deltaTime)
 {
+	// If behaviour has no weight dont do calculations
+	if (m_wanderWeighting <= 0.0f)
+	{
+		m_wanderDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		return;
+	}
+
 	// Wander timer
 	if (m_wanderAdjustmentTimer < 0.0f) {
 		// Reset the timer
@@ -208,20 +212,26 @@ void Agent::wander(float deltaTime)
 	sf::Vector2f wanderSteerForce = m_wanderDesiredVelocity - m_velocity; 
 	applySteeringFromForce(wanderSteerForce, m_wanderMaxSteeringForce, m_wanderStrength, m_wanderWeighting, deltaTime);
 }
-
 void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
 {
-	sf::Vector2f SelfPos = this->getPosition(); // Save own position
+	// If behaviour has no weight dont do calculations
+	if (m_separationWeighting <= 0.0f)
+	{
+		m_separationDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		return;
+	}
+
+	sf::Vector2f selfPos = this->getPosition(); // Save own position
 	sf::Vector2f diffAverage(0.0f, 0.0f); // Average difference vector
 	int count = 0; // Count of neighbours
 
 	for (const auto& agent : allAgents)
 	{
-		if (agent != this) // Don't separate from self
+		if (agent != this) // Dont separate from self
 		{
-			sf::Vector2f m_otherAgentPos = agent->getPosition(); // Get other agent's position
-			sf::Vector2f difference = SelfPos - m_otherAgentPos; // Calculate vec between agents
-			float distance = Utils::magnitude(difference);       // Calculate distance between agents
+			sf::Vector2f otherAgentPos = agent->getPosition(); // Get other agents position
+			sf::Vector2f difference = selfPos - otherAgentPos; // Calculate vec between agents
+			float distance = Utils::magnitude(difference);     // Calculate distance between agents
 
 			if (distance < getSeparationNeighbourhoodRadius()) // Check if distance is within neighbourhood radius
 			{
@@ -235,10 +245,48 @@ void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
 
 	if (count > 0) // If there are neighbours
 	{
-		diffAverage /= static_cast<float>(count);                     // Average the difference vector
-		diffAverage = Utils::normalised(diffAverage) * m_maxSpeed;    // Normalise and scale to max speed
-		// apply steering force
-		applySteeringFromDesiredVelocity(diffAverage, m_separationMaxSteeringForce, m_separationStrength, m_separationWeighting, deltaTime);
+		diffAverage /= static_cast<float>(count);                                  // Average the difference vector
+		m_separationDesiredVelocity = Utils::normalised(diffAverage) * m_maxSpeed; // Normalise and scale to max speed
+		applySteeringFromDesiredVelocity(m_separationDesiredVelocity, m_separationMaxSteeringForce, m_separationStrength, m_separationWeighting, deltaTime);
+	}
+}
+void Agent::cohesion(float deltaTime, const std::vector<Agent*>& allAgents)
+{
+	// TODO: This behaviour is done way better, refactor the other behaviours like this
+	
+	// If behavior has no weight dont do calculations
+	if (m_cohesionWeighting <= 0.0f) 
+	{
+		m_cohesionDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		return;
+	}
+
+	sf::Vector2f positionSum(0.0f, 0.0f);
+	int neighborsFound = 0;
+	sf::Vector2f selfPos = this->getPosition();
+
+	for (const auto& otherAgent : allAgents) 
+	{
+		if (!m_cohesionIncludesSelf && otherAgent == this) 
+		{
+			continue; // Skip if not including self
+		}
+
+		sf::Vector2f otherPos = otherAgent->getPosition();
+		float distance = Utils::magnitude(otherPos - selfPos);
+
+		if (distance < m_cohesionNeighbourhoodRadius)
+		{
+			positionSum += otherPos; // Add position to sum
+			neighborsFound++;
+		}
+	}
+
+	if (neighborsFound > 0) 
+	{
+		m_cohesionCenterOfMass = positionSum / static_cast<float>(neighborsFound);                    // Average position of neighbors
+		m_cohesionDesiredVelocity = Utils::normalised(m_cohesionCenterOfMass - selfPos) * m_maxSpeed; // Desired velocity towards the center of mass
+		applySteeringFromDesiredVelocity(m_cohesionDesiredVelocity, m_cohesionMaxSteeringForce, m_cohesionStrength, m_cohesionWeighting, deltaTime);
 	}
 }
 
@@ -257,7 +305,7 @@ void Agent::drawVelocityLine(sf::RenderTarget& target) const
 	// Create a VertexArray for the line
 	sf::VertexArray line(sf::PrimitiveType::Lines, 2);
 
-	// Set the starting point of the line (agent's position + a bit)
+	// Set the starting point of the line (agents position + a bit)
 	line[0].position = this->getPosition() + m_velocity * 0.2f;
 	line[0].color = sf::Color::Red;
 
@@ -277,7 +325,7 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 		float length = 3.0f; // Length of the line
 		// Create a VertexArray for the line
 		sf::VertexArray line(sf::PrimitiveType::Lines, 2);
-		// Set the starting point of the line (agent's position + a bit)
+		// Set the starting point of the line (agnets position + a bit)
 		line[0].position = this->getPosition() + m_velocity * 0.2f;
 		line[0].color = sf::Color::Green;
 		// Set the end point of the line (position + velocity)
@@ -293,7 +341,7 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 		float length = 3.0f; // Length of the line
 		// Create a VertexArray for the line
 		sf::VertexArray fleeLine(sf::PrimitiveType::Lines, 2);
-		// Set the starting point of the line (agent's position + a bit)
+		// Set the starting point of the line (agnets position + a bit)
 		fleeLine[0].position = this->getPosition() + m_velocity * 0.2f;
 		fleeLine[0].color = sf::Color::Blue;
 		// Set the end point of the line (position + velocity)
@@ -309,10 +357,10 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 		// - Wander Circle -
 		sf::CircleShape circle(m_wanderRadius);
 		sf::Vector2f circlePos = this->getPosition() + Utils::normalised(m_velocity) * m_wanderDistance;
-		circle.setFillColor(sf::Color(255, 0, 0, 100));
+		circle.setFillColor(sf::Color(100, 20, 20, 20));
 		circle.setPosition(circlePos);
 		circle.setOrigin({ m_wanderRadius, m_wanderRadius });
-		circle.setOutlineColor(sf::Color::Red);
+		circle.setOutlineColor(sf::Color(100, 20, 20, 60));
 		circle.setOutlineThickness(1.0f);
 		target.draw(circle);
 
@@ -334,28 +382,32 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 		// Max turn line
 		sf::VertexArray maxTurnLine(sf::PrimitiveType::Lines, 2);
 		maxTurnLine[0].position = circlePos;
-		maxTurnLine[0].color = sf::Color::Cyan;
+		maxTurnLine[0].color = sf::Color::Blue;
 		maxTurnLine[1].position = circlePos + sf::Vector2f(std::cos(m_wanderAngle - m_wanderAngleRandomStrength) * m_wanderRadius, std::sin(m_wanderAngle - m_wanderAngleRandomStrength) * m_wanderRadius);
-		maxTurnLine[1].color = sf::Color::Cyan;
+		maxTurnLine[1].color = sf::Color::Blue;
 		target.draw(maxTurnLine);
 
 		// Min turn line
 		sf::VertexArray minTurnLine(sf::PrimitiveType::Lines, 2);
 		minTurnLine[0].position = circlePos;
-		minTurnLine[0].color = sf::Color::Cyan;
+		minTurnLine[0].color = sf::Color::Blue;
 		minTurnLine[1].position = circlePos + sf::Vector2f(std::cos(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius, std::sin(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius);
-		minTurnLine[1].color = sf::Color::Cyan;
+		minTurnLine[1].color = sf::Color::Blue;
 		target.draw(minTurnLine);
 	}
 	// -- Separation Widget --
 	if (m_separationWeighting > 0.0f)
 	{
-		sf::CircleShape separationCircle(m_separationNeighbourhoodRadius);
-		separationCircle.setFillColor(sf::Color(100, 100, 100, 100));
-		separationCircle.setPosition(this->getPosition());
-		separationCircle.setOrigin({ m_separationNeighbourhoodRadius, m_separationNeighbourhoodRadius });
-		separationCircle.setOutlineColor(sf::Color::Black);
+		// - Separation Circle -
+		//sf::CircleShape separationCircle(m_separationNeighbourhoodRadius);
+		//separationCircle.setFillColor(sf::Color(100, 100, 100, 0));
+		//separationCircle.setPosition(this->getPosition());
+		//separationCircle.setOrigin({ m_separationNeighbourhoodRadius, m_separationNeighbourhoodRadius });
+		//separationCircle.setOutlineColor(sf::Color(100, 100, 100, 20));
+		//separationCircle.setOutlineThickness(1.0f);
+		//target.draw(separationCircle);
 
+		// - Separation Lines -
 		for (const auto& agent : allAgents)
 		{
 			if (agent == this)
@@ -363,7 +415,7 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 				continue; // Skip self
 			}
 			sf::Vector2f selfPos = this->getPosition();                 // Save own position
-			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agent's position
+			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agnets position
 			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
 			if (distance < m_separationNeighbourhoodRadius)
 			{
@@ -376,6 +428,27 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 				target.draw(line);
 			}
 		}
+	}
+	// -- Cohesion Widget --
+	if (m_cohesionWeighting > 0.0f)
+	{
+		// - Cohesion Circle -
+		//sf::CircleShape cohesionCircle(m_cohesionNeighbourhoodRadius);
+		//cohesionCircle.setFillColor(sf::Color(100, 100, 100, 0));
+		//cohesionCircle.setPosition(this->getPosition());
+		//cohesionCircle.setOrigin({ m_cohesionNeighbourhoodRadius, m_cohesionNeighbourhoodRadius });
+		//cohesionCircle.setOutlineColor(sf::Color(100, 100, 100, 20));
+		//cohesionCircle.setOutlineThickness(1.0f);
+		//target.draw(cohesionCircle);
+
+		// - Center of Mass --
+		sf::CircleShape centerOfMassCircle(5.0f);
+		centerOfMassCircle.setFillColor(sf::Color(0, 255, 0, 100));
+		centerOfMassCircle.setPosition(m_cohesionCenterOfMass);
+		centerOfMassCircle.setOrigin({ 5.0f, 5.0f });
+		centerOfMassCircle.setOutlineColor(sf::Color(0, 255, 0, 200));
+		centerOfMassCircle.setOutlineThickness(1.0f);
+		target.draw(centerOfMassCircle);
 	}
 }
 

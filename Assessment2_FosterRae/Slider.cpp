@@ -13,6 +13,7 @@
 #include <iostream> 
 
 // **=== Constructor ===**
+
 Slider::Slider(sf::Vector2f position, sf::Vector2f size, float minValue, float maxValue, float initialValue, sf::RenderWindow* window, const std::string& label, const sf::Font& font)
     :
     m_font(font),

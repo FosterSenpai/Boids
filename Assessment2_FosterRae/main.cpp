@@ -27,7 +27,7 @@ int main()
 
     // **=== Agent Creation ===**
 	std::vector<Agent*> agents;
-	for (int i = 0; i < 200; ++i)
+	for (int i = 0; i < 500; ++i)
 	{
 		sf::Vector2f spawnPos(static_cast<float>(rand() % window.getSize().x), static_cast<float>(rand() % window.getSize().y));
 		agents.push_back(new Agent(spawnPos));
@@ -69,21 +69,21 @@ int main()
 
 	// --- Seek Sliders ---
 	addSlider(0.0f, 1.0f, firstAgent->getSeekWeighting(), "Seek Weighting: ");
-	addSlider(0.0f, 100.0f, firstAgent->getSeekStrength(), "Seek Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getSeekStrength(), "Seek Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getSeekMaxSteeringForce(), "Seek Max Force: ");
 
 	sliderStartY += sectionSpacing;
 
 	// --- Flee Sliders ---
 	addSlider(0.0f, 1.0f, firstAgent->getFleeWeighting(), "Flee Weighting: ");
-	addSlider(0.0f, 100.0f, firstAgent->getFleeStrength(), "Flee Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getFleeStrength(), "Flee Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getFleeMaxSteeringForce(), "Flee Max Force: ");
 
 	sliderStartY += sectionSpacing;
 
 	// --- Wander Sliders ---
 	addSlider(0.0f, 1.0f, firstAgent->getWanderWeighting(), "Wander Weighting: ");
-	addSlider(0.0f, 100.0f, firstAgent->getWanderStrength(), "Wander Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getWanderStrength(), "Wander Strength: ");
 	addSlider(0.0f, 1.0f, firstAgent->getWanderAngleRandomStrength(), "Wander Angle Range: ");
 	addSlider(0.0f, 10.0f, firstAgent->getWanderMaxSteeringForce(), "Wander Max Force: ");
 
@@ -91,9 +91,19 @@ int main()
 
 	// --- Separation Sliders ---
 	addSlider(0.0f, 1.0f, firstAgent->getSeparationWeighting(), "Separation Weighting: ");
-	addSlider(0.0f, 100.0f, firstAgent->getSeparationStrength(), "Separation Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getSeparationStrength(), "Separation Strength: ");
 	addSlider(0.0f, 100.0f, firstAgent->getSeparationNeighbourhoodRadius(), "Separation Radius: ");
 	addSlider(0.0f, 10.0f, firstAgent->getSeparationMaxSteeringForce(), "Separation Max Force: ");
+
+	// RIGHT SIDE OF SCREEN
+	sliderStartY = 20.0f;
+	sliderStartX = window.getSize().x - sliderSize.x - 10.0f; // Right side of the screen
+
+	// --- Cohesion Sliders ---
+	addSlider(0.0f, 1.0f, firstAgent->getCohesionWeighting(), "Cohesion Weighting: ");
+	addSlider(0.0f, 10.0f, firstAgent->getCohesionStrength(), "Cohesion Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getCohesionMaxSteeringForce(), "Cohesion Max Force: ");
+	addSlider(0.0f, 200.0f, firstAgent->getCohesionNeighbourhoodRadius(), "Cohesion Radius: ");
 
 
 	bool showVisualizations = false;
@@ -159,6 +169,11 @@ int main()
 			float currentSeparationNeighbourhoodRadius = sliders[13]->getValue();
 			float currentSeparationMaxSteeringForce = sliders[14]->getValue();
 
+			float currentCohesionWeighting = sliders[15]->getValue();
+			float currentCohesionStrength = sliders[16]->getValue();
+			float currentCohesionMaxSteeringForce = sliders[17]->getValue();
+			float currentCohesionNeighbourhoodRadius = sliders[18]->getValue();
+
 			// Update agents values
 			for (auto& agent : agents)
 			{
@@ -182,6 +197,11 @@ int main()
 				agent->setSeparationStrength(currentSeparationStrength);
 				agent->setSeparationNeighbourhoodRadius(currentSeparationNeighbourhoodRadius);
 				agent->setSeparationMaxSteeringForce(currentSeparationMaxSteeringForce);
+
+				agent->setCohesionWeighting(currentCohesionWeighting);
+				agent->setCohesionStrength(currentCohesionStrength);
+				agent->setCohesionNeighbourhoodRadius(currentCohesionNeighbourhoodRadius);
+				agent->setCohesionMaxSteeringForce(currentCohesionMaxSteeringForce);
 			}
 
 			// **=== Rendering ===**

@@ -15,17 +15,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-// Movement enum
-enum class MovementType
-{
-	NONE,
-	SEEK,
-	FLEE,
-	PURSUE,
-	ARRIVAL,
-	WANDER
-};
-
 class Agent : public sf::Drawable, public sf::Transformable // Inherit from sf::Drawable & sf::Transformable
 {
 public:
@@ -76,7 +65,6 @@ public:
 	void setAlignmentMaxSteeringForce(float force) { m_alignmentMaxSteeringForce = force; }
 	void setAlignmentStrength(float strength) { m_alignmentStrength = strength; }
 	void setAlignmentNeighbourhoodRadius(float radius) { m_alignmentNeighbourhoodRadius = radius; }
-
 
 	// -- Getters --
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
@@ -156,6 +144,8 @@ private:
 	float m_cohesionNeighbourhoodRadius;
 	float m_cohesionStrength;
 	float m_cohesionMaxSteeringForce;
+	sf::Vector2f m_cohesionCenterOfMass;
+	bool m_cohesionIncludesSelf;
 
 	float m_separationWeighting;
 	sf::Vector2f m_separationDesiredVelocity;
@@ -191,5 +181,6 @@ private:
 	void flee(float deltaTime);
 	void wander(float deltaTime);
 	void separate(float deltaTime, const std::vector<Agent*>& allAgents);
+	void cohesion(float deltaTime, const std::vector<Agent*>& allAgents);
 };
 
