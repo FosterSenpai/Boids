@@ -636,17 +636,32 @@ void Agent::leaderFollowing(float deltaTime, const std::vector<Agent*>& allAgent
 		allAgents[0]->setColor(sf::Color(50, 50, 50)); // Set target color to default
 		return;
 	}
-	if (m_leaderFollowingWeighting <= 0.0f || m_pursuitTarget == nullptr)
+	if (m_leaderFollowingWeighting <= 0.0f || m_leaderFollowingTarget == nullptr)
 	{
 		m_leaderFollowingDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 		return;
 	}
+
 	// --- Calculate the Target Point for the Follower ---
 	m_leaderFollowingTarget->setColor(sf::Color::Red); // Set target color to red for visualization
-	// Negate velocity to get the opposite direction and scale it by the follow offset
 
-	sf::Vector2f targetWorldPos = allAgents[0]->getPosition() + Utils::normalised(allAgents[0]->getVelocity()) * m_followOffset;
-	// TODO: this target position is getting overridden by the target position of the agent, need to fix this
+	sf::Vector2f leaderDirection;
+	sf::Vector2f leaderVelocity = allAgents[0]->getVelocity();
+
+	if (Utils::magnitude(leaderVelocity) > 0.01f) // If leader is moving
+	{
+		leaderDirection = Utils::normalised(leaderVelocity);
+	}
+	else // If leader is stopped, use its last orientation
+	{
+		float leaderActualLastRotation = allAgents[0]->getLastRotation();
+		float angleRad = (leaderActualLastRotation - 90.0f) * (3.1415926535f / 180.0f);
+		leaderDirection = sf::Vector2f(std::cos(angleRad), std::sin(angleRad));
+	}
+
+	// Calculate targetWorldPos using this leaderDirection
+	sf::Vector2f targetWorldPos = allAgents[0]->getPosition() + leaderDirection * m_followOffset;
+
 
 	// Arrive at this Target World Position (just copied arrival logic over, didnt have time to make this use that func)
 	sf::Vector2f offsetToTargetWorldPos = targetWorldPos - getPosition();
@@ -655,7 +670,7 @@ void Agent::leaderFollowing(float deltaTime, const std::vector<Agent*>& allAgent
 	// Default to a zero desired velocity for this behavior
 	m_leaderFollowingDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 
-	const float arrivalToleranceRadiusLF = 5.0f;
+	const float arrivalToleranceRadiusLF = 15.0f;
 
 	if (distanceToTargetWorldPos > arrivalToleranceRadiusLF) { // If not at target
 		float desiredSpeed;
@@ -861,7 +876,20 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 	if (m_leaderFollowingWeighting > 0.0f && m_behaviour == Behaviour::LEADER_FOLLOWING)
 	{
 		// -- Draw the target point --
-		sf::Vector2f targetWorldPos = allAgents[0]->getPosition() + Utils::normalised(allAgents[0]->getVelocity()) * m_followOffset;
+		sf::Vector2f leaderDirection;
+		sf::Vector2f leaderVelocity = allAgents[0]->getVelocity();
+		if (Utils::magnitude(leaderVelocity) > 0.01f) // If leader is moving
+		{
+			leaderDirection = Utils::normalised(leaderVelocity);
+		}
+		else // If leader is stopped, use its last orientation
+		{
+			float leaderActualLastRotation = allAgents[0]->getLastRotation();
+			float angleRad = (leaderActualLastRotation - 90.0f) * (3.1415926535f / 180.0f);
+			leaderDirection = sf::Vector2f(std::cos(angleRad), std::sin(angleRad));
+		}
+		// Calculate targetWorldPos using this leaderDirection
+		sf::Vector2f targetWorldPos = allAgents[0]->getPosition() + leaderDirection * m_followOffset;
 		drawCircle(window, targetWorldPos, 5.0f, sf::Color(100, 100, 100, 10));
 		// -- Draw the desired velocity line --
 		sf::Vector2f endPoint = this->getPosition() + m_leaderFollowingDesiredVelocity * 1.0f;

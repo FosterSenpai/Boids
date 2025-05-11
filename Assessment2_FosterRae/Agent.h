@@ -186,6 +186,9 @@ public:
 	const sf::Vector2f& getLeaderFollowingTargetPosition() const { return m_leaderFollowingTarget->getPosition(); }
 	float getLeaderFollowingOffset() const { return m_followOffset; }
 
+	void setLastRotation(float rotation) { m_lastRotation = rotation; }
+	float getLastRotation() const { return m_lastRotation; }
+
 private:
 	// **=== Private Members ===**
 	float m_maxSpeed;
