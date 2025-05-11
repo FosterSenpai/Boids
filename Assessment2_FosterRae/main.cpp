@@ -117,24 +117,6 @@ int main()
 				if (keyPressed->scancode == sf::Keyboard::Scancode::V) {
 					showVisualizations = !showVisualizations; // Toggle visualizations
 				}
-				/* Removed, behaviour now weighted
-				// -- Change Behaviour --
-				if (keyPressed->scancode == sf::Keyboard::Scancode::Num1) { // 1 = Seek
-					for (auto& agent : agents) {
-						agent->setMovementType(MovementType::SEEK);
-					}
-				}
-				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num2) { // 2 = Flee
-					for (auto& agent : agents) {
-						agent->setMovementType(MovementType::FLEE);
-					}
-				}
-				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num3) { // 3 = Wander
-					for (auto& agent : agents) {
-						agent->setMovementType(MovementType::WANDER);
-					}
-				}
-				*/
 			}
 
 			// **=== UI Interaction ===**
