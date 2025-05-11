@@ -79,8 +79,12 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_obstacleDetectionLength(80.0f),
 	m_normalInfluence(2.0f),
 	m_tangentInfluence(7.0f),
+	m_closestThreatFound(false),
 
-	m_debug_closestThreatFound(false)
+	m_arrivalSlowingRadius(150.0f),
+	m_arrivalWeighting(0.0f),
+	m_arrivalMaxSteeringForce(5.0f),
+	m_arrivalStrength(5.0f)
 {
 	this->setPosition(spawnPos);    // Set the agnets position to spawn position
 	m_target.setPosition(spawnPos); // set for now, gets overridden in update
@@ -93,16 +97,15 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 {
 	// -- Update Agent Behaviour --
 	obstacleAvoidance(deltaTime, obstacles);
+	separate(deltaTime, allAgents);
 	seek(deltaTime);
 	flee(deltaTime);
-	wander(deltaTime);
-
-	separate(deltaTime, allAgents);
+	arrival(deltaTime);
 	cohesion(deltaTime, allAgents);
 	alignment(deltaTime, allAgents);
-
 	pursuit(deltaTime, allAgents);
 	evasion(deltaTime, allAgents);
+	wander(deltaTime);
 
 
     // -- Update Agent Position --
@@ -415,7 +418,7 @@ void Agent::evasion(float deltaTime, const std::vector<Agent*>& allAgents)
 }
 void Agent::obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obstacles) 
 {
-	m_debug_closestThreatFound = false; // Reset debug flag
+	m_closestThreatFound = false; // Reset debug flag
 
 	// Only process if the behavior has weight
 	if (m_obstacleAvoidanceWeighting <= 0.0f ) {
@@ -450,9 +453,9 @@ void Agent::obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obst
 				threatNormal = currentNormal;
 
 				// Capture visualization info
-				m_debug_closestThreatFound = true;
-				m_debug_intersectionPoint = m_detectionFeelerP1 + (m_detectionFeelerP2 - m_detectionFeelerP1) * minThreatIntersectionT;
-				m_debug_threatNormal = threatNormal;
+				m_closestThreatFound = true;
+				m_intersectionPoint = m_detectionFeelerP1 + (m_detectionFeelerP2 - m_detectionFeelerP1) * minThreatIntersectionT;
+				m_threatNormal = threatNormal;
 			}
 		}
 	}
@@ -551,6 +554,42 @@ void Agent::obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obst
 
 			return;
 		}
+	}
+}
+void Agent::arrival(float deltaTime)
+{
+	// Only process if the behavior has active weighting
+	if (m_arrivalWeighting <= 0.0f) {
+		m_arrivalDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
+		return;
+	}
+
+	sf::Vector2f targetOffset = m_target.getPosition() - getPosition();
+	float distanceToTarget = Utils::magnitude(targetOffset);
+
+	// Default to a zero desired velocity
+	m_arrivalDesiredVelocity = sf::Vector2f(0.f, 0.f);
+
+	const float arrivalToleranceRadius = 5.0f; // Radius for arrival tolerance
+
+	if (distanceToTarget > arrivalToleranceRadius) { // If not at target
+		float desiredSpeed;
+		if (m_arrivalSlowingRadius > 0.0f && distanceToTarget < m_arrivalSlowingRadius) 
+		{ // If within slowing radius
+			desiredSpeed = m_maxSpeed * (distanceToTarget / m_arrivalSlowingRadius); // Scale speed down based on distance to target
+		}
+		else { // If outside slowing radius
+			desiredSpeed = m_maxSpeed; // Full speed like seek
+		}
+		m_arrivalDesiredVelocity = Utils::normalised(targetOffset) * desiredSpeed; // Normalise and scale to desired speed
+	}
+	// Apply the steering force
+	applySteeringFromDesiredVelocity( m_arrivalDesiredVelocity, m_arrivalMaxSteeringForce, m_arrivalStrength, m_arrivalWeighting, deltaTime );
+
+	// If close and moving slowly, stop to prevent jitter.
+	if (distanceToTarget < arrivalToleranceRadius && Utils::magnitude(m_velocity) < 0.5f) {
+		m_velocity = sf::Vector2f(0.0f, 0.0f); // Hard stop
+		m_arrivalDesiredVelocity = sf::Vector2f(0.0f, 0.0f); // Ensure this is also zero for visualization
 	}
 }
 
@@ -713,16 +752,25 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 		// -- Draw the feeler line --
 		drawLine(window, m_detectionFeelerP1, m_detectionFeelerP2, sf::Color::Yellow);
 		// -- Draw intersection point and normals if threat found --
-		if (m_debug_closestThreatFound) {
+		if (m_closestThreatFound) {
 			// Draw the intersection point
-			drawCircle(window, m_debug_intersectionPoint, 4.0f, sf::Color::Red);
+			drawCircle(window, m_intersectionPoint, 4.0f, sf::Color::Red);
 			// Draw the normal at the intersection point
-			sf::Vector2f normalEndPoint = m_debug_intersectionPoint + m_debug_threatNormal * 30.0f;
-			drawLine(window, m_debug_intersectionPoint, normalEndPoint, sf::Color::Cyan);
+			sf::Vector2f normalEndPoint = m_intersectionPoint + m_threatNormal * 30.0f;
+			drawLine(window, m_intersectionPoint, normalEndPoint, sf::Color::Cyan);
 			// Draw final avoidance velocity line
 			sf::Vector2f endPoint = this->getPosition() + m_obstacleAvoidanceDesiredVelocity * 1.0f;
 			drawLine(window, this->getPosition(), endPoint, sf::Color::Black);
 		}
+	}
+	// -- Arrival Widget --
+	if (m_arrivalWeighting > 0.0f && m_behaviour == Behaviour::ARRIVAL)
+	{
+		// -- Draw the slowing radius --
+		drawCircle(window, m_target.getPosition(), m_arrivalSlowingRadius, sf::Color(100, 100, 100, 10));
+		// -- Draw the desired velocity line --
+		sf::Vector2f endPoint = this->getPosition() + m_arrivalDesiredVelocity * 1.0f;
+		drawLine(window, this->getPosition(), endPoint, sf::Color::Magenta);
 	}
 }
 

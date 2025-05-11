@@ -122,6 +122,12 @@ int main()
 	addSlider(0.0f, 300.0f, firstAgent->getObstacleDetectionBoxLength(), "Obstacle Detection Length: ");
 	addSlider(0.0f, 10.0f, firstAgent->getNormalInfluence(), "Normal Influence: ");
 	addSlider(0.0f, 10.0f, firstAgent->getTangentInfluence(), "Tangent Influence: ");
+	// --- Arrival Sliders ---
+	sliderStartY = 55.0f;
+	addSlider(0.0f, 1.0f, firstAgent->getArrivalWeighting(), "Arrival Weighting: ");
+	addSlider(0.0f, 10.0f, firstAgent->getArrivalStrength(), "Arrival Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getArrivalMaxSteeringForce(), "Arrival Max Force: ");
+	addSlider(0.0f, 300.0f, firstAgent->getArrivalSlowingRadius(), "Arrival Slowing Radius: ");
 
 	bool showVisualizations = false;
 
@@ -179,6 +185,11 @@ int main()
 		sliders[32]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
 		sliders[33]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
 		sliders[34]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
+
+		sliders[35]->setVisible(currentBehaviour == Behaviour::ARRIVAL);
+		sliders[36]->setVisible(currentBehaviour == Behaviour::ARRIVAL);
+		sliders[37]->setVisible(currentBehaviour == Behaviour::ARRIVAL);
+		sliders[38]->setVisible(currentBehaviour == Behaviour::ARRIVAL);
 
 		while (const std::optional event = window.pollEvent())
 		{
@@ -291,6 +302,20 @@ int main()
 						}
 					}
 				}
+				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num8) {
+					// If already in arrival change to none
+					if (firstAgent->getBehaviour() == Behaviour::ARRIVAL) {
+						for (auto& agent : agents) {
+							agent->setBehaviour(Behaviour::NONE);
+						}
+					}
+					else {
+						// Change to arrival behaviour
+						for (auto& agent : agents) {
+							agent->setBehaviour(Behaviour::ARRIVAL);
+						}
+					}
+				}
 			}
 
 			// **=== UI Interaction ===**
@@ -360,6 +385,11 @@ int main()
 		float currentNormalInfluence = sliders[33]->getValue();
 		float currentTangentInfluence = sliders[34]->getValue();
 
+		float currentArrivalWeighting = sliders[35]->getValue();
+		float currentArrivalStrength = sliders[36]->getValue();
+		float currentArrivalMaxSteeringForce = sliders[37]->getValue();
+		float currentArrivalSlowingRadius = sliders[38]->getValue();
+
 		// Update agents
 		for (auto& agent : agents)
 		{
@@ -408,6 +438,11 @@ int main()
 			agent->setObstacleDetectionBoxLength(currentObstacleDetectionBoxLength);
 			agent->setNormalInfluence(currentNormalInfluence);
 			agent->setTangentInfluence(currentTangentInfluence);
+
+			agent->setArrivalWeighting(currentArrivalWeighting);
+			agent->setArrivalStrength(currentArrivalStrength);
+			agent->setArrivalMaxSteeringForce(currentArrivalMaxSteeringForce);
+			agent->setArrivalSlowingRadius(currentArrivalSlowingRadius);
 
 			agent->update(dtSeconds, window, agents, obstacles);
 		}

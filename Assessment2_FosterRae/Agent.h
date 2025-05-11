@@ -27,7 +27,8 @@ enum class Behaviour
 	FLOCKING,
 	PURSUIT,
 	EVASION,
-	OBSTACLE_AVOIDANCE
+	OBSTACLE_AVOIDANCE,
+	ARRIVAL
 };
 
 class Agent : public sf::Drawable, public sf::Transformable // Inherit from sf::Drawable & sf::Transformable
@@ -104,6 +105,11 @@ public:
 	void setNormalInfluence(float influence) { m_normalInfluence = influence; }
 	void setTangentInfluence(float influence) { m_tangentInfluence = influence; }
 
+	void setArrivalSlowingRadius(float radius) { m_arrivalSlowingRadius = radius; }
+	void setArrivalMaxSteeringForce(float force) { m_arrivalMaxSteeringForce = force; }
+	void setArrivalStrength(float strength) { m_arrivalStrength = strength; }
+	void setArrivalWeighting(float weighting) { m_arrivalWeighting = weighting; }
+
 	// -- Getters --
 
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
@@ -159,6 +165,11 @@ public:
 	float getObstacleDetectionBoxLength() const { return m_obstacleDetectionLength; }
 	float getNormalInfluence() const { return m_normalInfluence; }
 	float getTangentInfluence() const { return m_tangentInfluence; }
+
+	float getArrivalSlowingRadius() const { return m_arrivalSlowingRadius; }
+	float getArrivalMaxSteeringForce() const { return m_arrivalMaxSteeringForce; }
+	float getArrivalStrength() const { return m_arrivalStrength; }
+	float getArrivalWeighting() const { return m_arrivalWeighting; }
 
 private:
 	// **=== Private Members ===**
@@ -237,11 +248,18 @@ private:
 	float m_obstacleDetectionLength; // How far ahead the agent looks
 	sf::Vector2f m_detectionFeelerP1;
 	sf::Vector2f m_detectionFeelerP2;
-	bool m_debug_closestThreatFound;
-	sf::Vector2f m_debug_intersectionPoint;
-	sf::Vector2f m_debug_threatNormal;
+	bool m_closestThreatFound;
+	sf::Vector2f m_intersectionPoint;
+	sf::Vector2f m_threatNormal;
 	float m_normalInfluence;
 	float m_tangentInfluence;
+	// Arrival
+	float m_arrivalWeighting;
+	float m_arrivalMaxSteeringForce;
+	float m_arrivalStrength;
+	float m_arrivalSlowingRadius;
+	sf::Vector2f m_arrivalDesiredVelocity;
+
 	// **=== Private Methods ===**
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method
@@ -271,5 +289,6 @@ private:
 	void pursuit(float deltaTime, const std::vector<Agent*>& allAgents);
 	void evasion(float deltaTime, const std::vector<Agent*>& allAgents);
 	void obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obstacles);
+	void arrival(float deltaTime);
 };
 
