@@ -51,8 +51,8 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_cohesionStrength(10.0f),
 	m_cohesionNeighbourhoodRadius(50.0f),
 
-	m_separationWeighting(0.0f),
-	m_separationMaxSteeringForce(5.0f),
+	m_separationWeighting(1.0f),
+	m_separationMaxSteeringForce(3.0f),
 	m_separationStrength(10.0f),
 	m_separationNeighbourhoodRadius(50.0f),
 
@@ -88,6 +88,11 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 	if (m_wanderWeighting > 0.0f)
 	{
 		wander(deltaTime);
+	}
+	// Separate
+	if (m_separationWeighting > 0.0f)
+	{
+		separate(deltaTime, allAgents);
 	}
 
     //----------------------------------------------------------------
@@ -239,12 +244,11 @@ void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
 
 // **=== Visualizations ===**
 
-void Agent::drawVisualizations(sf::RenderTarget& target) const
+void Agent::drawVisualizations(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const
 {
-	// TODO: Change different visuals on switch statement for different behaviours
 	// Draw visuals
-	drawVelocityLine(target);
-	drawDesiredVelocityLines(target);
+	//drawVelocityLine(target);
+	drawBehaviourVisuals(target, allAgents);
 }
 void Agent::drawVelocityLine(sf::RenderTarget& target) const
 {
@@ -265,7 +269,7 @@ void Agent::drawVelocityLine(sf::RenderTarget& target) const
 	// Draw the line
 	target.draw(line);
 }
-void Agent::drawDesiredVelocityLines(sf::RenderTarget& target) const
+void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const
 {
 	// -- Seek Desired Velocity Line --
 	if (m_seekWeighting > 0.0f)
@@ -342,6 +346,36 @@ void Agent::drawDesiredVelocityLines(sf::RenderTarget& target) const
 		minTurnLine[1].position = circlePos + sf::Vector2f(std::cos(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius, std::sin(m_wanderAngle + m_wanderAngleRandomStrength) * m_wanderRadius);
 		minTurnLine[1].color = sf::Color::Cyan;
 		target.draw(minTurnLine);
+	}
+	// -- Separation Widget --
+	if (m_separationWeighting > 0.0f)
+	{
+		sf::CircleShape separationCircle(m_separationNeighbourhoodRadius);
+		separationCircle.setFillColor(sf::Color(100, 100, 100, 100));
+		separationCircle.setPosition(this->getPosition());
+		separationCircle.setOrigin({ m_separationNeighbourhoodRadius, m_separationNeighbourhoodRadius });
+		separationCircle.setOutlineColor(sf::Color::Black);
+
+		for (const auto& agent : allAgents)
+		{
+			if (agent == this)
+			{
+				continue; // Skip self
+			}
+			sf::Vector2f selfPos = this->getPosition();                 // Save own position
+			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agent's position
+			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
+			if (distance < m_separationNeighbourhoodRadius)
+			{
+				// Draw the line
+				sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+				line[0].position = this->getPosition();
+				line[0].color = sf::Color::Magenta;
+				line[1].position = otherAgentPos;
+				line[1].color = sf::Color::Magenta;
+				target.draw(line);
+			}
+		}
 	}
 }
 

@@ -39,7 +39,7 @@ public:
 
 	// **=== Public Methods ===**
 	void update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents);
-	void drawVisualizations(sf::RenderTarget& target) const;
+	void drawVisualizations(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const;
 
 	// -- Setters --
 	void setTargetPosition(const sf::Vector2f& position) { m_target.setPosition(position); }
@@ -182,7 +182,7 @@ private:
 
 	// **=== Visualizations ===**
 	void drawVelocityLine(sf::RenderTarget& target) const;
-	void drawDesiredVelocityLines(sf::RenderTarget& target) const;
+	void drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const;
 
 	// **=== Steering Behaviours ===**
 	void applySteeringFromDesiredVelocity(const sf::Vector2f& desiredVelocity, float maxSteeringForce, float strength, float weighting, float deltaTime);
