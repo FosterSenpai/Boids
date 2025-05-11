@@ -43,10 +43,9 @@ int main()
 
 	// **=== Obstacle Creation ===**
 	std::vector<Obstacle> obstacles;
-	obstacles.emplace_back(Obstacle(sf::Vector2f(200.f, 150.f), sf::Vector2f(100.f, 80.f)));
-	obstacles.emplace_back(Obstacle(sf::Vector2f(500.f, 400.f), sf::Vector2f(120.f, 60.f)));
-	obstacles.emplace_back(Obstacle(sf::Vector2f(800.f, 250.f), sf::Vector2f(70.f, 70.f)));
-
+	obstacles.emplace_back(Obstacle(sf::Vector2f(260.f, 230.f), sf::Vector2f(100.f, 80.f)));
+	obstacles.emplace_back(Obstacle(sf::Vector2f(600.f, 300.f), sf::Vector2f(100.f, 80.f)));
+	obstacles.emplace_back(Obstacle(sf::Vector2f(1000.f, 400.f), sf::Vector2f(100.f, 80.f)));
 
 	// **=== UI Setup ===**
 
@@ -71,7 +70,7 @@ int main()
 	};
 
 	// --- Speed Slider ---
-	addSlider(0.0f, 100.0f, firstAgent->getSpeed(), "Speed: ");
+	addSlider(0.0f, 30.0f, firstAgent->getSpeed(), "Speed: ");
 	// --- Seek Sliders ---
 	addSlider(0.0f, 1.0f, firstAgent->getSeekWeighting(), "Seek Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getSeekStrength(), "Seek Strength: ");
@@ -120,7 +119,9 @@ int main()
 	addSlider(0.0f, 1.0f, firstAgent->getObstacleAvoidanceWeighting(), "Obstacle Avoidance Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getObstacleAvoidanceStrength(), "Obstacle Avoidance Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getObstacleAvoidanceMaxSteeringForce(), "Obstacle Avoidance Max Force: ");
-	addSlider(0.0f, 200.0f, firstAgent->getObstacleDetectionBoxLength(), "Obstacle Detection Length: ");
+	addSlider(0.0f, 300.0f, firstAgent->getObstacleDetectionBoxLength(), "Obstacle Detection Length: ");
+	addSlider(0.0f, 10.0f, firstAgent->getNormalInfluence(), "Normal Influence: ");
+	addSlider(0.0f, 10.0f, firstAgent->getTangentInfluence(), "Tangent Influence: ");
 
 	bool showVisualizations = false;
 
@@ -176,6 +177,8 @@ int main()
 		sliders[30]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
 		sliders[31]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
 		sliders[32]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
+		sliders[33]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
+		sliders[34]->setVisible(currentBehaviour == Behaviour::OBSTACLE_AVOIDANCE);
 
 		while (const std::optional event = window.pollEvent())
 		{
@@ -354,6 +357,8 @@ int main()
 		float currentObstacleAvoidanceStrength = sliders[30]->getValue();
 		float currentObstacleAvoidanceMaxSteeringForce = sliders[31]->getValue();
 		float currentObstacleDetectionBoxLength = sliders[32]->getValue();
+		float currentNormalInfluence = sliders[33]->getValue();
+		float currentTangentInfluence = sliders[34]->getValue();
 
 		// Update agents
 		for (auto& agent : agents)
@@ -401,6 +406,8 @@ int main()
 			agent->setObstacleAvoidanceStrength(currentObstacleAvoidanceStrength);
 			agent->setObstacleAvoidanceMaxSteeringForce(currentObstacleAvoidanceMaxSteeringForce);
 			agent->setObstacleDetectionBoxLength(currentObstacleDetectionBoxLength);
+			agent->setNormalInfluence(currentNormalInfluence);
+			agent->setTangentInfluence(currentTangentInfluence);
 
 			agent->update(dtSeconds, window, agents, obstacles);
 		}

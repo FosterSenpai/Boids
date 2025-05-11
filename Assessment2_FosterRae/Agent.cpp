@@ -73,10 +73,12 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_evasionStrength(2.0f),
 	m_evasionTarget(nullptr),
 
-	m_obstacleAvoidanceWeighting(0.0f),
-	m_obstacleAvoidanceMaxSteeringForce(5.0f),
-	m_obstacleAvoidanceStrength(2.0f),
-	m_obstacleDetectionBoxLength(50.0f),
+	m_obstacleAvoidanceWeighting(1.0f),
+	m_obstacleAvoidanceMaxSteeringForce(10.0f),
+	m_obstacleAvoidanceStrength(10.0f),
+	m_obstacleDetectionLength(80.0f),
+	m_normalInfluence(2.0f),
+	m_tangentInfluence(7.0f),
 
 	m_debug_closestThreatFound(false)
 {
@@ -413,69 +415,26 @@ void Agent::evasion(float deltaTime, const std::vector<Agent*>& allAgents)
 }
 void Agent::obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obstacles) 
 {
-	// -- Initial Checks & Setup --
-	m_debug_closestThreatFound = false;
-	m_debug_isUnsticking = false;
-	// Only process if the behavior has weight and the agent is moving
-	if (m_obstacleAvoidanceWeighting <= 0.0f || Utils::magnitude(m_velocity) < 0.001f) {
+	m_debug_closestThreatFound = false; // Reset debug flag
+
+	// Only process if the behavior has weight
+	if (m_obstacleAvoidanceWeighting <= 0.0f ) {
 		m_obstacleAvoidanceDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
-		return; // No avoidance needed or possible
+		return;
 	}
 
+	// - Feeler Threat Detection -
 	sf::Vector2f agentPos = this->getPosition();
 	sf::Vector2f velocityNormalised = Utils::normalised(m_velocity);
 
-	// -- Unsticking Logic (Agent Center Inside Obstacle) --
-	for (const auto& obstacle : obstacles) {
-		sf::Vector2f obsMin = obstacle.getMinBound();
-		sf::Vector2f obsMax = obstacle.getMaxBound();
-
-		// Simple AABB point containment check for agent's position
-		if (agentPos.x > obsMin.x && agentPos.x < obsMax.x &&
-			agentPos.y > obsMin.y && agentPos.y < obsMax.y) {
-
-			sf::Vector2f obstacleCenter = obsMin + obstacle.m_size * 0.5f;
-			sf::Vector2f unstickDirection = Utils::normalised(agentPos - obstacleCenter);
-
-			// If unstickDirection is zero (agent perfectly at center), pick an arbitrary direction
-			if (Utils::magnitude(unstickDirection) < 0.001f) {
-				unstickDirection = sf::Vector2f(1.0f, 0.0f);
-			}
-
-			m_obstacleAvoidanceDesiredVelocity = unstickDirection * m_maxSpeed;
-
-			m_debug_isUnsticking = true;
-			m_debug_unstickDirection = unstickDirection;
-			// Capture feeler still for visualization
-			float speedRatio = (m_maxSpeed > 0.01f) ? (Utils::magnitude(m_velocity) / m_maxSpeed) : 1.0f;
-			float dynamicDetectionLength = m_obstacleDetectionBoxLength * speedRatio;
-			dynamicDetectionLength = std::max(dynamicDetectionLength, std::max(m_agentSize.x, m_agentSize.y) * 1.5f);
-			m_detectionFeelerP1 = agentPos;
-			m_detectionFeelerP2 = agentPos + velocityNormalised * dynamicDetectionLength;
-			// Apply this unsticking force with high priority/strength
-			applySteeringFromDesiredVelocity(m_obstacleAvoidanceDesiredVelocity,
-				m_obstacleAvoidanceMaxSteeringForce * 1.5f, // Boost max force
-				m_obstacleAvoidanceStrength * 1.5f,     // Boost strength
-				1.0f, // Max weighting, effectively overriding others
-				deltaTime);
-			return; // Prioritize unsticking; skip other avoidance logic for this frame
-		}
-	}
-
-	// -- Feeler-Based Threat Detection --
-
-	// Dynamically adjust detection box length based on speed
-	float speedRatio = (m_maxSpeed > 0.01f) ? (Utils::magnitude(m_velocity) / m_maxSpeed) : 1.0f;
-	float dynamicDetectionLength = m_obstacleDetectionBoxLength * speedRatio;
-	// Minimum detection length
-	dynamicDetectionLength = std::max(dynamicDetectionLength, std::max(m_agentSize.x, m_agentSize.y) * 1.5f);
-
+	// Set the feeler points
 	m_detectionFeelerP1 = agentPos;
-	m_detectionFeelerP2 = agentPos + velocityNormalised * dynamicDetectionLength;
+	m_detectionFeelerP2 = agentPos + velocityNormalised * m_obstacleDetectionLength;
 
+	// -- Find Closest Threat --
 	Obstacle* closestThreat = nullptr;
-	float minThreatIntersectionT = 2.0f; // Initialize high (max t for segment is 1.0)
-	sf::Vector2f threatNormal(0.0f, 0.0f);
+	float minThreatIntersectionT = 2.0f; // Minimum t value for intersection
+	sf::Vector2f threatNormal; 
 
 	// Find the closest obstacle intersecting the feeler
 	for (const auto& obstacle : obstacles) {
@@ -484,11 +443,10 @@ void Agent::obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obst
 
 		if (Utils::lineIntersectsAABB(m_detectionFeelerP1, m_detectionFeelerP2,
 			obstacle.getMinBound(), obstacle.getMaxBound(),
-			currentIntersectionT, currentNormal)) {
-			// Check if this intersection is valid (t within [0,1]) and closer than previous threats
-			if (currentIntersectionT >= 0.0f && currentIntersectionT <= 1.0f && currentIntersectionT < minThreatIntersectionT) {
-				minThreatIntersectionT = currentIntersectionT;
-				closestThreat = const_cast<Obstacle*>(&obstacle);
+			currentIntersectionT, currentNormal)) {                                                                              // Check if line intersects AABB
+			if (currentIntersectionT >= 0.0f && currentIntersectionT <= 1.0f && currentIntersectionT < minThreatIntersectionT) { // Check if threat is closer
+				minThreatIntersectionT = currentIntersectionT;    // Update minimum t value
+				closestThreat = const_cast<Obstacle*>(&obstacle); // Update closest threat
 				threatNormal = currentNormal;
 
 				// Capture visualization info
@@ -499,57 +457,100 @@ void Agent::obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obst
 		}
 	}
 
-	// -- Calculate and Apply Avoidance Steering Force (if threat detected) --
-
-	// Reset desired velocity for this specific behavior before calculation
-	m_obstacleAvoidanceDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
+	// -- Calculate Steering Force If Threat Detected --
+	m_obstacleAvoidanceDesiredVelocity = sf::Vector2f(0.0f, 0.0f); // Reset desired velocity
 
 	if (closestThreat) {
-		// A. Calculate base components for steering
 		sf::Vector2f steeringForceNormalComponent = threatNormal; // Normal points outwards from obstacle
-		float urgencyFactor = (1.0f - minThreatIntersectionT);   // Closer = more urgent (0 to 1)
 
-		// B. Calculate Tangential Component for smoother sliding
-		sf::Vector2f steeringForceTangentComponent;
+		// - Slide Along The Obstacle -
+		sf::Vector2f steeringForceTangentComponent; // Will move tangentially
 		float velDotNormal = (velocityNormalised.x * threatNormal.x + velocityNormalised.y * threatNormal.y);
-		sf::Vector2f tangentProjection = velocityNormalised - (threatNormal * velDotNormal);
+		sf::Vector2f tangentProjection = velocityNormalised - (threatNormal * velDotNormal); // Projection of velocity onto normal
 
-		if (Utils::magnitude(tangentProjection) > 0.01f) {
-			steeringForceTangentComponent = Utils::normalised(tangentProjection);
+		if (Utils::magnitude(tangentProjection) > 0.01f) { // If not directly into normal
+			steeringForceTangentComponent = Utils::normalised(tangentProjection); // Normalise the tangent projection
 		}
-		else {
-			// If velocity is directly into normal, pick an arbitrary perpendicular tangent
-			steeringForceTangentComponent = sf::Vector2f(-threatNormal.y, threatNormal.x);
+		else { // If directly into normal
+			steeringForceTangentComponent = sf::Vector2f(-threatNormal.y, threatNormal.x); // Move perpendicular to normal
 		}
 
-		// C. Combine Normal and Tangential Forces
-		// TODO: Expose normalInfluence and tangentInfluence as member variables / slider controls
-		float normalInfluence = 4.0f;   // How much to push directly away
-		float tangentInfluence = 4.75f; // How much to encourage sliding
+		// Combine normal and tangential forces
+		sf::Vector2f combinedSteeringDirection = (steeringForceNormalComponent * m_normalInfluence) + (steeringForceTangentComponent * m_tangentInfluence);
 
-		sf::Vector2f combinedSteeringDirection = (steeringForceNormalComponent * normalInfluence) +
-			(steeringForceTangentComponent * tangentInfluence);
-
-		if (Utils::magnitude(combinedSteeringDirection) > 0.01f) {
+		if (Utils::magnitude(combinedSteeringDirection) > 0.01f) { // Avoid zero vector
 			combinedSteeringDirection = Utils::normalised(combinedSteeringDirection);
 		}
 		else {
-			combinedSteeringDirection = threatNormal; // Fallback if combined direction is somehow zero
+			combinedSteeringDirection = threatNormal; // Default to normal if zero vector i guess
 		}
-		m_obstacleAvoidanceDesiredVelocity = combinedSteeringDirection * m_maxSpeed * urgencyFactor;
+		m_obstacleAvoidanceDesiredVelocity = combinedSteeringDirection * m_maxSpeed ;
 
-		// D. Add Braking Component for head-on collisions
-		float dotProductVelNormal = velDotNormal; // Re-use earlier calculation
-		if (dotProductVelNormal < -0.8f && minThreatIntersectionT < 0.3f) { // Very head-on and very close
-			m_obstacleAvoidanceDesiredVelocity -= velocityNormalised * m_maxSpeed * urgencyFactor * 0.5f;
+		//Apply the steering force
+		applySteeringFromDesiredVelocity(m_obstacleAvoidanceDesiredVelocity, m_obstacleAvoidanceMaxSteeringForce, m_obstacleAvoidanceStrength, m_obstacleAvoidanceWeighting, deltaTime);
+	}
+
+	// -- Bounce And Kick Agents Out Of Obstacles --
+	agentPos = this->getPosition(); // Get pos again just in case
+
+	for (const auto& obstacle : obstacles) { // Check all obstacles
+		// Get the min and max bounds of the obstacle
+		sf::Vector2f obsMin = obstacle.getMinBound();
+		sf::Vector2f obsMax = obstacle.getMaxBound();
+
+		if (agentPos.x > obsMin.x && agentPos.x < obsMax.x &&
+			agentPos.y > obsMin.y && agentPos.y < obsMax.y) { // Check if agent is inside the obstacle
+
+			// --- Kick Overlapping Agent Out ---
+			sf::Vector2f obstacleCenter = obsMin + obstacle.m_size * 0.5f; // Center of the obstacle
+			sf::Vector2f penetrationNormal; // This will be the normal of the face we push out from
+			float penetrationDepth = std::numeric_limits<float>::max();
+
+			// Calculate overlaps for each axis
+			float overlapLeft = agentPos.x - obsMin.x;       // How far agent is from left edge
+			float overlapRight = obsMax.x - agentPos.x;      // How far agent is from right edge
+			float overlapTop = agentPos.y - obsMin.y;        // How far agent is from top edge
+			float overlapBottom = obsMax.y - agentPos.y;     // How far agent is from bottom edge
+
+			// Push towards the axis with the smallest overlap
+			if (overlapLeft > 0 && overlapLeft < penetrationDepth) {
+				penetrationDepth = overlapLeft;
+				penetrationNormal = sf::Vector2f(-1.0f, 0.0f); // Push left to get out
+			}
+			if (overlapRight > 0 && overlapRight < penetrationDepth) {
+				penetrationDepth = overlapRight;
+				penetrationNormal = sf::Vector2f(1.0f, 0.0f);  // Push right to get out
+			}
+			if (overlapTop > 0 && overlapTop < penetrationDepth) {
+				penetrationDepth = overlapTop;
+				penetrationNormal = sf::Vector2f(0.0f, -1.0f); // Push up to get out
+			}
+			if (overlapBottom > 0 && overlapBottom < penetrationDepth) {
+				penetrationDepth = overlapBottom;
+				penetrationNormal = sf::Vector2f(0.0f, 1.0f);  // Push down to get out
+			}
+
+			// --- HARD SETTING POS ---
+			sf::Vector2f newPosition = agentPos + penetrationNormal * (penetrationDepth + 0.01f);
+			this->setPosition(newPosition); // Set the new position of the agent immediately
+			agentPos = newPosition; // Update local agentPos for rest of calculations in frame
+
+			// --- REFLECT VELOCITY ---
+			float dotVN = (m_velocity.x * penetrationNormal.x + m_velocity.y * penetrationNormal.y); // Dot product of velocity and penetration normal
+
+			// Only reflect if the agent was moving into the surface it penetrated
+			if (dotVN < 0) { // dotVN < 0 means velocity had a component going INTO the surface normal
+				sf::Vector2f reflectedVelocity = m_velocity - penetrationNormal * (2.0f * dotVN); // Reflect the velocity
+
+				float restitution = 0.6f; // Dampen the bounce (0.0 to less than 1.0)
+				m_velocity = reflectedVelocity * restitution;
+			}
+			else { // If agent was already moving parallel or away from this surface normal (scraping)
+				m_velocity *= 0.8f; // Slow down a bit
+			}
+
+			return;
 		}
-
-		// E. Apply the final steering force
-		applySteeringFromDesiredVelocity(m_obstacleAvoidanceDesiredVelocity,
-			m_obstacleAvoidanceMaxSteeringForce,
-			m_obstacleAvoidanceStrength,
-			m_obstacleAvoidanceWeighting,
-			deltaTime);
 	}
 }
 
@@ -563,7 +564,6 @@ void Agent::drawLine(sf::RenderTarget& window, const sf::Vector2f& start, const 
 	line[1].color = color;
 	window.draw(line);
 }
-
 void Agent::drawCircle(sf::RenderTarget& window, const sf::Vector2f& position, float radius, const sf::Color& color) const
 {
 	sf::CircleShape circle(radius);
@@ -574,7 +574,6 @@ void Agent::drawCircle(sf::RenderTarget& window, const sf::Vector2f& position, f
 	circle.setOutlineThickness(1.0f);
 	window.draw(circle);
 }
-
 void Agent::drawVisualizations(sf::RenderTarget& window, const std::vector<Agent*>& allAgents) const
 {
 	// Draw visuals
@@ -713,16 +712,8 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 	{
 		// -- Draw the feeler line --
 		drawLine(window, m_detectionFeelerP1, m_detectionFeelerP2, sf::Color::Yellow);
-		// -- Draw ejection direction and ping agent if stuck --
-		if (m_debug_isUnsticking) {
-			// Draw the unstick direction
-			sf::Vector2f unstickEndPoint = getPosition() + m_debug_unstickDirection * 50.0f;
-			drawLine(window, getPosition(), unstickEndPoint, sf::Color::Red); // Draw unstick direction
-			// Ping the agent
-			drawCircle(window, getPosition(), 2.0f, sf::Color::Red);
-		}
 		// -- Draw intersection point and normals if threat found --
-		else if (m_debug_closestThreatFound) {
+		if (m_debug_closestThreatFound) {
 			// Draw the intersection point
 			drawCircle(window, m_debug_intersectionPoint, 4.0f, sf::Color::Red);
 			// Draw the normal at the intersection point

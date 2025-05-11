@@ -87,7 +87,7 @@ namespace Utils
             return false;
         }
 
-		// -- Intersected AABB, now calculate the intersection normal --
+		// -- Intersected, calculate the normal --
         // Calculate the intersection normal
 		if (tEnterX > tEnterY) { // If entered through X
             if (invDir.x < 0.0f) { // Line dir is negative X

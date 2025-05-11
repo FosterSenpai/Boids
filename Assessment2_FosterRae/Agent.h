@@ -100,7 +100,9 @@ public:
 	void setObstacleAvoidanceWeighting(float weighting) { m_obstacleAvoidanceWeighting = weighting; }
 	void setObstacleAvoidanceMaxSteeringForce(float force) { m_obstacleAvoidanceMaxSteeringForce = force; }
 	void setObstacleAvoidanceStrength(float strength) { m_obstacleAvoidanceStrength = strength; }
-	void setObstacleDetectionBoxLength(float length) { m_obstacleDetectionBoxLength = length; }
+	void setObstacleDetectionBoxLength(float length) { m_obstacleDetectionLength = length; }
+	void setNormalInfluence(float influence) { m_normalInfluence = influence; }
+	void setTangentInfluence(float influence) { m_tangentInfluence = influence; }
 
 	// -- Getters --
 
@@ -154,8 +156,9 @@ public:
 	float getObstacleAvoidanceWeighting() const { return m_obstacleAvoidanceWeighting; }
 	float getObstacleAvoidanceMaxSteeringForce() const { return m_obstacleAvoidanceMaxSteeringForce; }
 	float getObstacleAvoidanceStrength() const { return m_obstacleAvoidanceStrength; }
-	float getObstacleDetectionBoxLength() const { return m_obstacleDetectionBoxLength; }
-
+	float getObstacleDetectionBoxLength() const { return m_obstacleDetectionLength; }
+	float getNormalInfluence() const { return m_normalInfluence; }
+	float getTangentInfluence() const { return m_tangentInfluence; }
 
 private:
 	// **=== Private Members ===**
@@ -231,14 +234,14 @@ private:
 	sf::Vector2f m_obstacleAvoidanceDesiredVelocity;
 	float m_obstacleAvoidanceMaxSteeringForce;
 	float m_obstacleAvoidanceStrength;
-	float m_obstacleDetectionBoxLength; // How far ahead the agent looks
+	float m_obstacleDetectionLength; // How far ahead the agent looks
 	sf::Vector2f m_detectionFeelerP1;
 	sf::Vector2f m_detectionFeelerP2;
 	bool m_debug_closestThreatFound;
 	sf::Vector2f m_debug_intersectionPoint;
 	sf::Vector2f m_debug_threatNormal;
-	bool m_debug_isUnsticking;
-	sf::Vector2f m_debug_unstickDirection;
+	float m_normalInfluence;
+	float m_tangentInfluence;
 	// **=== Private Methods ===**
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method

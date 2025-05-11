@@ -1,28 +1,34 @@
-// Obstacle.cpp
-#include "Obstacle.h" // Include the header file we just created
+// /***********************************************************************
+// Bachelor of Software Engineering
+// Media Design School
+// Auckland
+// New Zealand
+// (c) 2025 Media Design School
+// File Name : Obstacle.cpp
+// Description : Implementation file for the Obstacle class. Defines the properties.
+// Author : Foster Rae
+// Mail : foster.rae@mds.ac.nz
+// ************************************************************************/
+#include "Obstacle.h"
 
-// Constructor Implementation
 Obstacle::Obstacle(sf::Vector2f position, sf::Vector2f size)
     : m_position(position), m_size(size) {
-    // Configure the SFML shape
+    // Configure the shape
     m_shape.setPosition(m_position);
     m_shape.setSize(m_size);
-    m_shape.setFillColor(sf::Color(120, 120, 120)); // A medium grey color
+    m_shape.setFillColor(sf::Color(120, 120, 120));
     m_shape.setOutlineColor(sf::Color::Black);
-    m_shape.setOutlineThickness(2.0f); // A visible outline
+    m_shape.setOutlineThickness(2.0f);
 }
 
-// Draw Method Implementation
 void Obstacle::draw(sf::RenderTarget& target) const {
-    target.draw(m_shape); // Draw the SFML shape
+    target.draw(m_shape);
 }
 
-// getMinBound Implementation
 sf::Vector2f Obstacle::getMinBound() const {
-    return m_position; // Top-left corner is the min bound for AABB
+    return m_position; // Top-left corner
 }
 
-// getMaxBound Implementation
 sf::Vector2f Obstacle::getMaxBound() const {
     return m_position + m_size; // Bottom-right corner
 }
