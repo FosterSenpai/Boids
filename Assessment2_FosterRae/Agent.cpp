@@ -60,7 +60,18 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_alignmentWeighting(0.0f),
 	m_alignmentMaxSteeringForce(5.0f),
 	m_alignmentStrength(2.0f),
-	m_alignmentNeighbourhoodRadius(50.0f)
+	m_alignmentNeighbourhoodRadius(50.0f),
+
+	m_pursuitWeighting(0.0f),
+	m_pursuitMaxSteeringForce(5.0f),
+	m_pursuitStrength(2.0f),
+	m_pursuitTarget(nullptr),
+
+	m_evasionWeighting(0.0f),
+	m_evasionMaxSteeringForce(5.0f),
+	m_evasionStrength(2.0f),
+	m_evasionTarget(nullptr)
+
 {
 	this->setPosition(spawnPos);    // Set the agnets position to spawn position
 	m_target.setPosition(spawnPos); // set for now, gets overridden in update
@@ -81,6 +92,10 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 
 	separate(deltaTime, allAgents);
 	cohesion(deltaTime, allAgents);
+	alignment(deltaTime, allAgents);
+
+	pursuit(deltaTime, allAgents);
+	evasion(deltaTime, allAgents);
 
     //----------------------------------------------------------------
     // MOVEMENT & PHYSICS
@@ -290,6 +305,115 @@ void Agent::cohesion(float deltaTime, const std::vector<Agent*>& allAgents)
 	}
 }
 
+void Agent::alignment(float deltaTime, const std::vector<Agent*>& allAgents)
+{
+	sf::Vector2f selfPos = this->getPosition(); // Save own position
+	sf::Vector2f velocityAverage(0.0f, 0.0f);   // Average velocity vector
+	int count = 0; // Count of neighbours
+
+	// If behaviour has no weight dont do calculations
+	if (m_alignmentWeighting <= 0.0f)
+	{
+		m_alignmentDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		return;
+	}
+
+	for (const auto& otherAgent : allAgents)
+	{
+		if (otherAgent == this) continue; // Skip self (wow, can call in one line)
+
+		sf::Vector2f otherVelocity = otherAgent->getVelocity();
+		sf::Vector2f otherPos = otherAgent->getPosition();
+		float distance = Utils::magnitude(otherPos - selfPos); // Calculate distance between agents
+
+		if (distance < m_alignmentNeighbourhoodRadius) // Check if distance is within neighbourhood radius
+		{
+			velocityAverage += otherVelocity; // Add to average
+			count++;
+		}
+	}
+
+	if (count > 0) // If there are neighbours
+	{
+		velocityAverage /= static_cast<float>(count); // Average the velocity vector
+		m_alignmentDesiredVelocity = Utils::normalised(velocityAverage) * m_maxSpeed; // Normalise and scale to max speed
+		applySteeringFromDesiredVelocity(m_alignmentDesiredVelocity, m_alignmentMaxSteeringForce, m_alignmentStrength, m_alignmentWeighting, deltaTime);
+	}
+}
+
+void Agent::pursuit(float deltaTime, const std::vector<Agent*>& allAgents)
+{
+	// Set target to the first agent in the list
+	if (m_pursuitTarget == nullptr && !allAgents.empty())
+	{
+		if (allAgents[0] != this) // Dont set target for self
+		{
+			m_pursuitTarget = allAgents[0]; // Set target to the first agent in the list
+		}
+	}
+
+	// If behaviour has no weight or no target dont do calculations
+	if (m_pursuitWeighting <= 0.0f && m_evasionWeighting <= 0.0f) // Need to check all targeted behaviour weight to not override
+	{
+		allAgents[0]->setColor(sf::Color(50, 50, 50)); // Set target color to default
+		return;
+	}
+	if (m_pursuitWeighting <= 0.0f || m_pursuitTarget == nullptr)
+	{
+		m_pursuitDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		return;
+	}
+
+
+	m_pursuitTarget->setColor(sf::Color::Red); // Set target color to red for visualization
+
+	sf::Vector2f targetPos = m_pursuitTarget->getPosition(); // Get target position
+	sf::Vector2f selfPos = this->getPosition();              // Save own position
+
+	float predictionTime = Utils::magnitude(targetPos - selfPos) / m_maxSpeed;                     // Calculate time to reach target
+	sf::Vector2f predictedTargetPos = targetPos + m_pursuitTarget->getVelocity() * predictionTime; // Predict target position
+
+	// Calculate desired velocity towards predicted target position
+	m_pursuitDesiredVelocity = Utils::normalised(predictedTargetPos - selfPos) * m_maxSpeed; // Normalise and scale to max speed
+	// Update Steering Force
+	applySteeringFromDesiredVelocity(m_pursuitDesiredVelocity, m_pursuitMaxSteeringForce, m_pursuitStrength, m_pursuitWeighting, deltaTime);
+}
+
+void Agent::evasion(float deltaTime, const std::vector<Agent*>& allAgents)
+{ // TODO: Maybe add radius check so agents only evade when target close
+	// Set target to the first agent in the list
+	if (m_evasionTarget == nullptr && !allAgents.empty())
+	{
+		if (allAgents[0] != this) // Dont set target for self
+		{
+			m_evasionTarget = allAgents[0]; // Set target to the first agent in the list
+		}
+	}
+	// If behaviour has no weight or no target dont do calculations
+	if (m_evasionWeighting <= 0.0f && m_pursuitWeighting <= 0.0f)
+	{
+		allAgents[0]->setColor(sf::Color(50, 50, 50)); // Set target color to default
+		return;
+	}
+	if (m_evasionWeighting <= 0.0f || m_evasionTarget == nullptr)
+	{
+		m_evasionDesiredVelocity = sf::Vector2f(0.f, 0.f);
+		return;
+	}
+	m_evasionTarget->setColor(sf::Color::Red); // Set target color to red for visualization
+
+	sf::Vector2f targetPos = m_evasionTarget->getPosition(); // Get target position
+	sf::Vector2f selfPos = this->getPosition();              // Save own position
+
+	float predictionTime = Utils::magnitude(targetPos - selfPos) / m_maxSpeed;                     // Calculate time to reach target
+	sf::Vector2f predictedTargetPos = targetPos + m_evasionTarget->getVelocity() * predictionTime; // Predict target position
+
+	// Calculate desired velocity towards predicted target position
+	m_evasionDesiredVelocity = Utils::normalised(selfPos - predictedTargetPos) * m_maxSpeed; // Normalise and scale to max speed
+	// Update Steering Force
+	applySteeringFromDesiredVelocity(m_evasionDesiredVelocity, m_evasionMaxSteeringForce, m_evasionStrength, m_evasionWeighting, deltaTime);
+}
+
 // **=== Visualizations ===**
 
 void Agent::drawVisualizations(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const
@@ -432,23 +556,54 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Age
 	// -- Cohesion Widget --
 	if (m_cohesionWeighting > 0.0f)
 	{
-		// - Cohesion Circle -
-		//sf::CircleShape cohesionCircle(m_cohesionNeighbourhoodRadius);
-		//cohesionCircle.setFillColor(sf::Color(100, 100, 100, 0));
-		//cohesionCircle.setPosition(this->getPosition());
-		//cohesionCircle.setOrigin({ m_cohesionNeighbourhoodRadius, m_cohesionNeighbourhoodRadius });
-		//cohesionCircle.setOutlineColor(sf::Color(100, 100, 100, 20));
-		//cohesionCircle.setOutlineThickness(1.0f);
-		//target.draw(cohesionCircle);
 
-		// - Center of Mass --
-		sf::CircleShape centerOfMassCircle(5.0f);
-		centerOfMassCircle.setFillColor(sf::Color(0, 255, 0, 100));
-		centerOfMassCircle.setPosition(m_cohesionCenterOfMass);
-		centerOfMassCircle.setOrigin({ 5.0f, 5.0f });
-		centerOfMassCircle.setOutlineColor(sf::Color(0, 255, 0, 200));
-		centerOfMassCircle.setOutlineThickness(1.0f);
-		target.draw(centerOfMassCircle);
+		// - Cohesion Lines to Center of Mass -
+		for (const auto& agent : allAgents)
+		{
+			if (agent == this)
+			{
+				continue; // Skip self
+			}
+			sf::Vector2f selfPos = this->getPosition();                 // Save own position
+			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agnets position
+			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
+			if (distance < m_cohesionNeighbourhoodRadius)
+			{
+				// Draw the line
+				sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+				line[0].position = this->getPosition();
+				line[0].color = sf::Color::Cyan;
+				line[1].position = m_cohesionCenterOfMass;
+				line[1].color = sf::Color::Cyan;
+				target.draw(line);
+			}
+		}
+	}
+
+	// -- Alignment Widget --
+	if (m_alignmentWeighting > 0.0f)
+	{
+		// - 'Aligning to' line -
+		for (const auto& agent : allAgents)
+		{
+			if (agent == this)
+			{
+				continue; // Skip self
+			}
+			sf::Vector2f selfPos = this->getPosition();                 // Save own position
+			sf::Vector2f otherAgentPos = agent->getPosition();          // Get other agnets position
+			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
+			if (distance < m_alignmentNeighbourhoodRadius)
+			{
+				// Draw the line
+				sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+				line[0].position = this->getPosition();
+				line[0].color = sf::Color::Cyan;
+				line[1].position = otherAgentPos;
+				line[1].color = sf::Color::Cyan;
+				target.draw(line);
+			}
+		}
 	}
 }
 

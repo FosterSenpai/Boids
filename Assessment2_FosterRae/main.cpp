@@ -27,7 +27,7 @@ int main()
 
     // **=== Agent Creation ===**
 	std::vector<Agent*> agents;
-	for (int i = 0; i < 500; ++i)
+	for (int i = 0; i < 200; ++i)
 	{
 		sf::Vector2f spawnPos(static_cast<float>(rand() % window.getSize().x), static_cast<float>(rand() % window.getSize().y));
 		agents.push_back(new Agent(spawnPos));
@@ -88,23 +88,40 @@ int main()
 	addSlider(0.0f, 10.0f, firstAgent->getWanderMaxSteeringForce(), "Wander Max Force: ");
 
 	sliderStartY += sectionSpacing;
+	// RIGHT SIDE OF SCREEN
+	sliderStartY = 20.0f;
+	sliderStartX = window.getSize().x - sliderSize.x - 10.0f; // Right side of the screen
 
 	// --- Separation Sliders ---
 	addSlider(0.0f, 1.0f, firstAgent->getSeparationWeighting(), "Separation Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getSeparationStrength(), "Separation Strength: ");
 	addSlider(0.0f, 100.0f, firstAgent->getSeparationNeighbourhoodRadius(), "Separation Radius: ");
 	addSlider(0.0f, 10.0f, firstAgent->getSeparationMaxSteeringForce(), "Separation Max Force: ");
-
-	// RIGHT SIDE OF SCREEN
-	sliderStartY = 20.0f;
-	sliderStartX = window.getSize().x - sliderSize.x - 10.0f; // Right side of the screen
-
+	sliderStartY += sectionSpacing;
 	// --- Cohesion Sliders ---
 	addSlider(0.0f, 1.0f, firstAgent->getCohesionWeighting(), "Cohesion Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getCohesionStrength(), "Cohesion Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getCohesionMaxSteeringForce(), "Cohesion Max Force: ");
 	addSlider(0.0f, 200.0f, firstAgent->getCohesionNeighbourhoodRadius(), "Cohesion Radius: ");
+	sliderStartY += sectionSpacing;
+	// --- Alignment Sliders ---
+	addSlider(0.0f, 1.0f, firstAgent->getAlignmentWeighting(), "Alignment Weighting: ");
+	addSlider(0.0f, 10.0f, firstAgent->getAlignmentStrength(), "Alignment Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getAlignmentMaxSteeringForce(), "Alignment Max Force: ");
+	addSlider(0.0f, 200.0f, firstAgent->getAlignmentNeighbourhoodRadius(), "Alignment Radius: ");
+	sliderStartY += sectionSpacing;
 
+	// --- Pursuit Sliders ---
+	addSlider(0.0f, 1.0f, firstAgent->getPursuitWeighting(), "Pursuit Weighting: ");
+	addSlider(0.0f, 10.0f, firstAgent->getPursuitStrength(), "Pursuit Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getPursuitMaxSteeringForce(), "Pursuit Max Force: ");
+	sliderStartY += sectionSpacing;
+
+	// --- Evasion Sliders ---
+	addSlider(0.0f, 1.0f, firstAgent->getEvasionWeighting(), "Evasion Weighting: ");
+	addSlider(0.0f, 10.0f, firstAgent->getEvasionStrength(), "Evasion Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getEvasionMaxSteeringForce(), "Evasion Max Force: ");
+	sliderStartY += sectionSpacing;
 
 	bool showVisualizations = false;
 
@@ -174,6 +191,20 @@ int main()
 			float currentCohesionMaxSteeringForce = sliders[17]->getValue();
 			float currentCohesionNeighbourhoodRadius = sliders[18]->getValue();
 
+			float currentAlignmentWeighting = sliders[19]->getValue();
+			float currentAlignmentStrength = sliders[20]->getValue();
+			float currentAlignmentMaxSteeringForce = sliders[21]->getValue();
+			float currentAlignmentNeighbourhoodRadius = sliders[22]->getValue();
+
+			float currentPursuitWeighting = sliders[23]->getValue();
+			float currentPursuitStrength = sliders[24]->getValue();
+			float currentPursuitMaxSteeringForce = sliders[25]->getValue();
+
+			float currentEvasionWeighting = sliders[26]->getValue();
+			float currentEvasionStrength = sliders[27]->getValue();
+			float currentEvasionMaxSteeringForce = sliders[28]->getValue();
+
+
 			// Update agents values
 			for (auto& agent : agents)
 			{
@@ -202,6 +233,19 @@ int main()
 				agent->setCohesionStrength(currentCohesionStrength);
 				agent->setCohesionNeighbourhoodRadius(currentCohesionNeighbourhoodRadius);
 				agent->setCohesionMaxSteeringForce(currentCohesionMaxSteeringForce);
+
+				agent->setAlignmentWeighting(currentAlignmentWeighting);
+				agent->setAlignmentStrength(currentAlignmentStrength);
+				agent->setAlignmentMaxSteeringForce(currentAlignmentMaxSteeringForce);
+				agent->setAlignmentNeighbourhoodRadius(currentAlignmentNeighbourhoodRadius);
+
+				agent->setPursuitWeighting(currentPursuitWeighting);
+				agent->setPursuitStrength(currentPursuitStrength);
+				agent->setPursuitMaxSteeringForce(currentPursuitMaxSteeringForce);
+
+				agent->setEvasionWeighting(currentEvasionWeighting);
+				agent->setEvasionStrength(currentEvasionStrength);
+				agent->setEvasionMaxSteeringForce(currentEvasionMaxSteeringForce);
 			}
 
 			// **=== Rendering ===**

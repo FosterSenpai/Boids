@@ -33,6 +33,7 @@ public:
 	// -- Setters --
 	void setTargetPosition(const sf::Vector2f& position) { m_target.setPosition(position); }
 	void setSpeed(float speed) { m_speedMultiplier = speed; }
+	void setColor(const sf::Color& color) { m_shape.setFillColor(color); }
 
 	void setSeekWeighting(float weighting) { m_seekWeighting = weighting; }
 	void setSeekMaxSteeringForce(float force) { m_seekMaxSteeringForce = force; }
@@ -66,9 +67,20 @@ public:
 	void setAlignmentStrength(float strength) { m_alignmentStrength = strength; }
 	void setAlignmentNeighbourhoodRadius(float radius) { m_alignmentNeighbourhoodRadius = radius; }
 
+	void setPursuitWeighting(float weighting) { m_pursuitWeighting = weighting; }
+	void setPursuitMaxSteeringForce(float force) { m_pursuitMaxSteeringForce = force; }
+	void setPursuitStrength(float strength) { m_pursuitStrength = strength; }
+	void setPursuitTarget(Agent* target) { m_pursuitTarget = target; }
+
+	void setEvasionWeighting(float weighting) { m_evasionWeighting = weighting; }
+	void setEvasionMaxSteeringForce(float force) { m_evasionMaxSteeringForce = force; }
+	void setEvasionStrength(float strength) { m_evasionStrength = strength; }
+	void setEvasionTarget(Agent* target) { m_evasionTarget = target; }
+
 	// -- Getters --
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
 	float getSpeed() const { return m_speedMultiplier; }
+	const sf::Vector2f& getVelocity() const { return m_velocity; }
 
 	float getSeekWeighting() const { return m_seekWeighting; }
 	float getSeekMaxSteeringForce() const { return m_seekMaxSteeringForce; }
@@ -101,6 +113,17 @@ public:
 	float getAlignmentMaxSteeringForce() const { return m_alignmentMaxSteeringForce; }
 	float getAlignmentStrength() const { return m_alignmentStrength; }
 	float getAlignmentNeighbourhoodRadius() const { return m_alignmentNeighbourhoodRadius; }
+
+	float getPursuitWeighting() const { return m_pursuitWeighting; }
+	float getPursuitMaxSteeringForce() const { return m_pursuitMaxSteeringForce; }
+	float getPursuitStrength() const { return m_pursuitStrength; }
+	const sf::Vector2f& getPursuitTargetPosition() const { return m_pursuitTarget->getPosition(); }
+
+	float getEvasionWeighting() const { return m_evasionWeighting; }
+	float getEvasionMaxSteeringForce() const { return m_evasionMaxSteeringForce; }
+	float getEvasionStrength() const { return m_evasionStrength; }
+	const sf::Vector2f& getEvasionTargetPosition() const { return m_evasionTarget->getPosition(); } // Get the target position for evasion
+
 
 private:
 	// **=== Private Members ===**
@@ -138,7 +161,7 @@ private:
 	float m_targetWanderAngle;
 	// Flocking
 	float m_flockingWeighting;
-
+	// Cohesion
 	float m_cohesionWeighting;
 	sf::Vector2f m_cohesionDesiredVelocity;
 	float m_cohesionNeighbourhoodRadius;
@@ -146,18 +169,30 @@ private:
 	float m_cohesionMaxSteeringForce;
 	sf::Vector2f m_cohesionCenterOfMass;
 	bool m_cohesionIncludesSelf;
-
+	// Separation
 	float m_separationWeighting;
 	sf::Vector2f m_separationDesiredVelocity;
 	float m_separationNeighbourhoodRadius;
 	float m_separationStrength;
 	float m_separationMaxSteeringForce;
-
+	// Alignment
 	float m_alignmentWeighting;
 	sf::Vector2f m_alignmentDesiredVelocity;
 	float m_alignmentNeighbourhoodRadius;
 	float m_alignmentStrength;
 	float m_alignmentMaxSteeringForce;
+	// Pursuit
+	float m_pursuitWeighting;
+	sf::Vector2f m_pursuitDesiredVelocity;
+	float m_pursuitMaxSteeringForce;
+	float m_pursuitStrength;
+	Agent* m_pursuitTarget;
+	// Evasion
+	float m_evasionWeighting;
+	sf::Vector2f m_evasionDesiredVelocity;
+	float m_evasionMaxSteeringForce;
+	float m_evasionStrength;
+	Agent* m_evasionTarget;
 
 
 	// **=== Private Methods ===**
@@ -182,5 +217,8 @@ private:
 	void wander(float deltaTime);
 	void separate(float deltaTime, const std::vector<Agent*>& allAgents);
 	void cohesion(float deltaTime, const std::vector<Agent*>& allAgents);
+	void alignment(float deltaTime, const std::vector<Agent*>& allAgents);
+	void pursuit(float deltaTime, const std::vector<Agent*>& allAgents);
+	void evasion(float deltaTime, const std::vector<Agent*>& allAgents);
 };
 
