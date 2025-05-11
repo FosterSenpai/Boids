@@ -128,6 +128,12 @@ int main()
 	addSlider(0.0f, 10.0f, firstAgent->getArrivalStrength(), "Arrival Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getArrivalMaxSteeringForce(), "Arrival Max Force: ");
 	addSlider(0.0f, 300.0f, firstAgent->getArrivalSlowingRadius(), "Arrival Slowing Radius: ");
+	// --- Leader Following Sliders ---
+	sliderStartY = 55.0f;
+	addSlider(0.0f, 1.0f, firstAgent->getLeaderFollowingWeighting(), "Leader Following Weighting: ");
+	addSlider(0.0f, 10.0f, firstAgent->getLeaderFollowingStrength(), "Leader Following Strength: ");
+	addSlider(0.0f, 10.0f, firstAgent->getLeaderFollowingMaxSteeringForce(), "Leader Following Max Force: ");
+
 
 	bool showVisualizations = false;
 
@@ -191,12 +197,24 @@ int main()
 		sliders[37]->setVisible(currentBehaviour == Behaviour::ARRIVAL);
 		sliders[38]->setVisible(currentBehaviour == Behaviour::ARRIVAL);
 
+		sliders[39]->setVisible(currentBehaviour == Behaviour::LEADER_FOLLOWING);
+		sliders[40]->setVisible(currentBehaviour == Behaviour::LEADER_FOLLOWING);
+		sliders[41]->setVisible(currentBehaviour == Behaviour::LEADER_FOLLOWING);
+
 		while (const std::optional event = window.pollEvent())
 		{
 			if (event->is<sf::Event::Closed>())
 				window.close();
+			// **=== Mouse Events ===**
+            if (event->is<sf::Event::MouseButtonPressed>() && event->getIf<sf::Event::MouseButtonPressed>()->button == sf::Mouse::Button::Left)
+			{
+				// spawn agents at mouse position
+				sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+				agents.push_back(new Agent(mousePos));
+				agents.back()->setBehaviour(firstAgent->getBehaviour());
+			}
 			// **=== Key Events ===**
-			else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>())
+			if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>())
 			{
 				if (keyPressed->scancode == sf::Keyboard::Scancode::V) {
 					showVisualizations = !showVisualizations; // Toggle visualizations
@@ -316,6 +334,20 @@ int main()
 						}
 					}
 				}
+				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num9) {
+					// If already in leader following change to none
+					if (firstAgent->getBehaviour() == Behaviour::LEADER_FOLLOWING) {
+						for (auto& agent : agents) {
+							agent->setBehaviour(Behaviour::NONE);
+						}
+					}
+					else {
+						// Change to leader following behaviour
+						for (auto& agent : agents) {
+							agent->setBehaviour(Behaviour::LEADER_FOLLOWING);
+						}
+					}
+					}
 			}
 
 			// **=== UI Interaction ===**
@@ -390,6 +422,10 @@ int main()
 		float currentArrivalMaxSteeringForce = sliders[37]->getValue();
 		float currentArrivalSlowingRadius = sliders[38]->getValue();
 
+		float currentLeaderFollowingWeighting = sliders[39]->getValue();
+		float currentLeaderFollowingStrength = sliders[40]->getValue();
+		float currentLeaderFollowingMaxSteeringForce = sliders[41]->getValue();
+
 		// Update agents
 		for (auto& agent : agents)
 		{
@@ -443,6 +479,10 @@ int main()
 			agent->setArrivalStrength(currentArrivalStrength);
 			agent->setArrivalMaxSteeringForce(currentArrivalMaxSteeringForce);
 			agent->setArrivalSlowingRadius(currentArrivalSlowingRadius);
+
+			agent->setLeaderFollowingWeighting(currentLeaderFollowingWeighting);
+			agent->setLeaderFollowingStrength(currentLeaderFollowingStrength);
+			agent->setLeaderFollowingMaxSteeringForce(currentLeaderFollowingMaxSteeringForce);
 
 			agent->update(dtSeconds, window, agents, obstacles);
 		}

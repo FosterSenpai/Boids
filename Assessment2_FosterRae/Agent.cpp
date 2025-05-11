@@ -84,7 +84,15 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_arrivalSlowingRadius(150.0f),
 	m_arrivalWeighting(0.0f),
 	m_arrivalMaxSteeringForce(5.0f),
-	m_arrivalStrength(5.0f)
+	m_arrivalStrength(5.0f),
+
+	m_leaderFollowingTarget(nullptr),
+	m_followOffset(-80.0f),
+	m_leaderFollowingWeighting(0.0f),
+	m_leaderFollowingMaxSteeringForce(4.0f),
+	m_leaderFollowingStrength(1.0f),
+	m_isTargetAgent(false),
+	m_lastRotation(0.0f)
 {
 	this->setPosition(spawnPos);    // Set the agnets position to spawn position
 	m_target.setPosition(spawnPos); // set for now, gets overridden in update
@@ -95,12 +103,25 @@ Agent::Agent(sf::Vector2f& spawnPos)
 
 void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents, const std::vector<Obstacle>& obstacles)
 {
+	// If this agent is the target agent, override its behavior
+	if (m_isTargetAgent && (m_pursuitWeighting > 0.0f || m_evasionWeighting > 0.0f || m_leaderFollowingWeighting > 0.0f))
+	{
+		// Set full seek weighting
+		m_arrivalWeighting = 1.0f; // Allow control of the target agent
+		m_cohesionWeighting = 0.0f;
+		m_separationWeighting = 0.0f;
+		m_alignmentWeighting = 0.0f;
+		m_obstacleAvoidanceWeighting = 0.0f;
+		m_wanderWeighting = 0.0f;
+	}
+
 	// -- Update Agent Behaviour --
 	obstacleAvoidance(deltaTime, obstacles);
 	separate(deltaTime, allAgents);
 	seek(deltaTime);
 	flee(deltaTime);
 	arrival(deltaTime);
+	leaderFollowing(deltaTime, allAgents);
 	cohesion(deltaTime, allAgents);
 	alignment(deltaTime, allAgents);
 	pursuit(deltaTime, allAgents);
@@ -114,9 +135,15 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
     // -- Update Agent Rotation --
     if (Utils::magnitude(m_velocity) > 0.01f) // Only rotate if moving to avoid jittering
     {
-        float angle = std::atan2(m_velocity.y, m_velocity.x) * 180.0f / 3.1415926535f;
-        this->setRotation(sf::degrees(angle + 90.0f));
+		float angle = std::atan2(m_velocity.y, m_velocity.x) * 180.0f / 3.1415926535f;
+		m_lastRotation = angle + 90.0f; // Update the last valid rotation
+		this->setRotation(sf::degrees(m_lastRotation));
     }
+	else
+	{
+		// Use the last valid rotation when the agent is stationary
+		this->setRotation(sf::degrees(m_lastRotation));
+	}
 
     // -- Handle Screen Boundaries --
     handleBoundary(window); // Wrap agent position around the screen
@@ -353,15 +380,15 @@ void Agent::pursuit(float deltaTime, const std::vector<Agent*>& allAgents)
 	{
 		if (allAgents[0] != this) // Dont set target for self
 		{
-			m_pursuitTarget = allAgents[0]; // Set target to the first agent in the list
+			m_pursuitTarget = allAgents[0];            // Set target to the first agent in the list
+			m_pursuitTarget->setAsTargetAgent(true);
 		}
 	}
 
 	// If behaviour has no weight or no target dont do calculations
-	if (m_pursuitWeighting <= 0.0f && m_evasionWeighting <= 0.0f) // Need to check all targeted behaviour weight to not override
+	if (m_pursuitWeighting <= 0.0f && m_evasionWeighting <= 0.0f && m_leaderFollowingWeighting <= 0.0f) // Need to check all targeted behaviour weight to not override
 	{
 		allAgents[0]->setColor(sf::Color(50, 50, 50)); // Set target color to default
-		return;
 	}
 	if (m_pursuitWeighting <= 0.0f || m_pursuitTarget == nullptr)
 	{
@@ -390,13 +417,13 @@ void Agent::evasion(float deltaTime, const std::vector<Agent*>& allAgents)
 		if (allAgents[0] != this) // Dont set target for self
 		{
 			m_evasionTarget = allAgents[0]; // Set target to the first agent in the list
+			m_evasionTarget->setAsTargetAgent(true);
 		}
 	}
 	// If behaviour has no weight or no target dont do calculations
-	if (m_evasionWeighting <= 0.0f && m_pursuitWeighting <= 0.0f)
+	if (m_pursuitWeighting <= 0.0f && m_evasionWeighting <= 0.0f && m_leaderFollowingWeighting <= 0.0f)
 	{
 		allAgents[0]->setColor(sf::Color(50, 50, 50)); // Set target color to default
-		return;
 	}
 	if (m_evasionWeighting <= 0.0f || m_evasionTarget == nullptr)
 	{
@@ -568,7 +595,7 @@ void Agent::arrival(float deltaTime)
 	float distanceToTarget = Utils::magnitude(targetOffset);
 
 	// Default to a zero desired velocity
-	m_arrivalDesiredVelocity = sf::Vector2f(0.f, 0.f);
+	m_arrivalDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 
 	const float arrivalToleranceRadius = 5.0f; // Radius for arrival tolerance
 
@@ -590,6 +617,64 @@ void Agent::arrival(float deltaTime)
 	if (distanceToTarget < arrivalToleranceRadius && Utils::magnitude(m_velocity) < 0.5f) {
 		m_velocity = sf::Vector2f(0.0f, 0.0f); // Hard stop
 		m_arrivalDesiredVelocity = sf::Vector2f(0.0f, 0.0f); // Ensure this is also zero for visualization
+	}
+}
+void Agent::leaderFollowing(float deltaTime, const std::vector<Agent*>& allAgents)
+{
+	// Set target to the first agent in the list
+	if (m_leaderFollowingTarget == nullptr && !allAgents.empty())
+	{
+		if (allAgents[0] != this) // Dont set target for self
+		{
+			m_leaderFollowingTarget = allAgents[0]; // Set target to the first agent in the list
+			m_leaderFollowingTarget->setAsTargetAgent(true);
+		}
+	}
+	// If behaviour has no weight or no target dont do calculations
+	if (m_pursuitWeighting <= 0.0f && m_evasionWeighting <= 0.0f && m_leaderFollowingWeighting <= 0.0f) // Need to check all targeted behaviour weight to not override
+	{
+		allAgents[0]->setColor(sf::Color(50, 50, 50)); // Set target color to default
+		return;
+	}
+	if (m_leaderFollowingWeighting <= 0.0f || m_pursuitTarget == nullptr)
+	{
+		m_leaderFollowingDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
+		return;
+	}
+	// --- Calculate the Target Point for the Follower ---
+	m_leaderFollowingTarget->setColor(sf::Color::Red); // Set target color to red for visualization
+	// Negate velocity to get the opposite direction and scale it by the follow offset
+
+	sf::Vector2f targetWorldPos = allAgents[0]->getPosition() + Utils::normalised(allAgents[0]->getVelocity()) * m_followOffset;
+	// TODO: this target position is getting overridden by the target position of the agent, need to fix this
+
+	// Arrive at this Target World Position (just copied arrival logic over, didnt have time to make this use that func)
+	sf::Vector2f offsetToTargetWorldPos = targetWorldPos - getPosition();
+	float distanceToTargetWorldPos = Utils::magnitude(offsetToTargetWorldPos);
+
+	// Default to a zero desired velocity for this behavior
+	m_leaderFollowingDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
+
+	const float arrivalToleranceRadiusLF = 5.0f;
+
+	if (distanceToTargetWorldPos > arrivalToleranceRadiusLF) { // If not at target
+		float desiredSpeed;
+		if (m_arrivalSlowingRadius > 0.0f && distanceToTargetWorldPos < m_arrivalSlowingRadius) { // If within slowing radius
+			desiredSpeed = m_maxSpeed * (distanceToTargetWorldPos / m_arrivalSlowingRadius); // Scale speed down based on distance to target
+		}
+		else {
+			desiredSpeed = m_maxSpeed; // Full speed like seek
+		}
+		m_leaderFollowingDesiredVelocity = Utils::normalised(offsetToTargetWorldPos) * desiredSpeed;
+	}
+
+	// Apply Steering Force
+	applySteeringFromDesiredVelocity( m_leaderFollowingDesiredVelocity, m_leaderFollowingMaxSteeringForce, m_leaderFollowingStrength, m_leaderFollowingWeighting, deltaTime );
+
+	// Stop if Close and Slow (prevent jitter)
+	if (distanceToTargetWorldPos < arrivalToleranceRadiusLF && Utils::magnitude(m_velocity) < 0.5f) {
+		m_velocity = sf::Vector2f(0.0f, 0.0f); // Hard stop
+		m_leaderFollowingDesiredVelocity = sf::Vector2f(0.0f, 0.0f); // Also update for visualization
 	}
 }
 
@@ -770,6 +855,16 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 		drawCircle(window, m_target.getPosition(), m_arrivalSlowingRadius, sf::Color(100, 100, 100, 10));
 		// -- Draw the desired velocity line --
 		sf::Vector2f endPoint = this->getPosition() + m_arrivalDesiredVelocity * 1.0f;
+		drawLine(window, this->getPosition(), endPoint, sf::Color::Magenta);
+	}
+	// -- Leader Following Widget --
+	if (m_leaderFollowingWeighting > 0.0f && m_behaviour == Behaviour::LEADER_FOLLOWING)
+	{
+		// -- Draw the target point --
+		sf::Vector2f targetWorldPos = allAgents[0]->getPosition() + Utils::normalised(allAgents[0]->getVelocity()) * m_followOffset;
+		drawCircle(window, targetWorldPos, 5.0f, sf::Color(100, 100, 100, 10));
+		// -- Draw the desired velocity line --
+		sf::Vector2f endPoint = this->getPosition() + m_leaderFollowingDesiredVelocity * 1.0f;
 		drawLine(window, this->getPosition(), endPoint, sf::Color::Magenta);
 	}
 }

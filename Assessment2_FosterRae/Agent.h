@@ -28,7 +28,8 @@ enum class Behaviour
 	PURSUIT,
 	EVASION,
 	OBSTACLE_AVOIDANCE,
-	ARRIVAL
+	ARRIVAL,
+	LEADER_FOLLOWING
 };
 
 class Agent : public sf::Drawable, public sf::Transformable // Inherit from sf::Drawable & sf::Transformable
@@ -55,6 +56,7 @@ public:
 	void setSpeed(float speed) { m_speedMultiplier = speed; }
 	void setColor(const sf::Color& color) { m_shape.setFillColor(color); }
 	void setBehaviour(Behaviour behaviour) { m_behaviour = behaviour; }
+	void setAsTargetAgent(bool isTarget) { m_isTargetAgent = isTarget; }
 
 	void setSeekWeighting(float weighting) { m_seekWeighting = weighting; }
 	void setSeekMaxSteeringForce(float force) { m_seekMaxSteeringForce = force; }
@@ -110,12 +112,19 @@ public:
 	void setArrivalStrength(float strength) { m_arrivalStrength = strength; }
 	void setArrivalWeighting(float weighting) { m_arrivalWeighting = weighting; }
 
+	void setLeaderFollowingWeighting(float weighting) { m_leaderFollowingWeighting = weighting; }
+	void setLeaderFollowingMaxSteeringForce(float force) { m_leaderFollowingMaxSteeringForce = force; }
+	void setLeaderFollowingStrength(float strength) { m_leaderFollowingStrength = strength; }
+	void setLeaderFollowingTarget(Agent* target) { m_leaderFollowingTarget = target; }
+	void setLeaderFollowingOffset(const float offset) { m_followOffset = offset; }
+
 	// -- Getters --
 
 	const sf::Vector2f& getTargetPosition() const { return m_target.getPosition(); }
 	float getSpeed() const { return m_speedMultiplier; }
 	const sf::Vector2f& getVelocity() const { return m_velocity; }
 	const Behaviour& getBehaviour() const { return m_behaviour; }
+	bool isTargetAgent() const { return m_isTargetAgent; }
 
 	float getSeekWeighting() const { return m_seekWeighting; }
 	float getSeekMaxSteeringForce() const { return m_seekMaxSteeringForce; }
@@ -171,6 +180,12 @@ public:
 	float getArrivalStrength() const { return m_arrivalStrength; }
 	float getArrivalWeighting() const { return m_arrivalWeighting; }
 
+	float getLeaderFollowingWeighting() const { return m_leaderFollowingWeighting; }
+	float getLeaderFollowingMaxSteeringForce() const { return m_leaderFollowingMaxSteeringForce; }
+	float getLeaderFollowingStrength() const { return m_leaderFollowingStrength; }
+	const sf::Vector2f& getLeaderFollowingTargetPosition() const { return m_leaderFollowingTarget->getPosition(); }
+	float getLeaderFollowingOffset() const { return m_followOffset; }
+
 private:
 	// **=== Private Members ===**
 	float m_maxSpeed;
@@ -179,12 +194,14 @@ private:
 
 	sf::Transformable m_target;
 	sf::Vector2f m_velocity;
+	float m_lastRotation;
 
 	// -- Shape --
 	sf::ConvexShape m_shape;  // Shape representing the agent
 	sf::Vector2f m_agentSize; // Size of the shape
 
 	// -- Steering Forces --
+	bool m_isTargetAgent;
 	// Seek
 	float m_seekWeighting;
 	sf::Vector2f m_seekDesiredVelocity;
@@ -259,6 +276,13 @@ private:
 	float m_arrivalStrength;
 	float m_arrivalSlowingRadius;
 	sf::Vector2f m_arrivalDesiredVelocity;
+	// Leader following
+	Agent* m_leaderFollowingTarget;
+	float m_followOffset;
+	float m_leaderFollowingWeighting;
+	float m_leaderFollowingMaxSteeringForce;
+	float m_leaderFollowingStrength;
+	sf::Vector2f m_leaderFollowingDesiredVelocity;
 
 	// **=== Private Methods ===**
 
@@ -290,5 +314,6 @@ private:
 	void evasion(float deltaTime, const std::vector<Agent*>& allAgents);
 	void obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obstacles);
 	void arrival(float deltaTime);
+	void leaderFollowing(float deltaTime, const std::vector<Agent*>& allAgents);
 };
 
