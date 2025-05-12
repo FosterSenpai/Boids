@@ -25,6 +25,12 @@ namespace Utils
      */
     float magnitude(const sf::Vector2f& vector);
 
+    /**
+	 * @brief Calculate the dot product of two vectors.
+	 * @param vec1 The first vector.
+	 * @param vec2 The second vector.
+	 * @return The dot product of the two vectors. (float)
+     */
     float dot(const sf::Vector2f& vec1, const sf::Vector2f& vec2);
 
     /**

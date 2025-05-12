@@ -22,21 +22,18 @@ namespace Utils
 		// TODO: Make squared mag func or something and use where possible to avoid sqrt
         return std::sqrt(vector.x * vector.x + vector.y * vector.y); // Magnitude = sqrt(x^2 + y^2)
     }
-
     float dot(const sf::Vector2f& vec1, const sf::Vector2f& vec2)
     {
         return vec1.x * vec2.x + vec1.y * vec2.y;
     }
-
     sf::Vector2f truncate(const sf::Vector2f& vector, float max) {
-        float length = magnitude(vector); // Calculate magnitude
+        float length = magnitude(vector);
 
         if (length > max && length > 0.00001f) { // Check length > 0 to avoid division by zero
             return (vector / length) * max;
         }
         return vector; // Return original vector if no truncation needed or if it's a zero vector
     }
-
     sf::Vector2f normalised(const sf::Vector2f& vector) {
         float length = magnitude(vector);
         if (length > 0.0f)
@@ -45,20 +42,17 @@ namespace Utils
         }
         return { 0.0f, 0.0f }; // Return zero vector if the original vector had zero length
     }
-
 	// Helper function to get rng engine
     std::mt19937& getRandomEngine()
     {
         static std::mt19937 engine(std::random_device{}());
         return engine;
     }
-
     float randomRange(float min, float max)
     {
         std::uniform_real_distribution<float> dist(min, max);
-        return dist(getRandomEngine()); // Uses the static engine
+        return dist(getRandomEngine());
     }
-    
     bool lineIntersectsAABB(const sf::Vector2f& lineP1, const sf::Vector2f& lineP2, const sf::Vector2f& rectMin, const sf::Vector2f& rectMax, float& tIntersection, sf::Vector2f& outIntersectionNormal)
     {
 		sf::Vector2f dir = lineP2 - lineP1; // Direction vector of the line segment

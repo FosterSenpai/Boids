@@ -45,10 +45,36 @@ public:
 
 	// **=== Public Methods ===**
 
+	/**
+	 * @brief Updates the agent's position and behaviour based on the specified delta time, window, agents, and obstacles.
+	 * @param deltaTime Time since the last update.
+	 * @param window The window to check for boundaries.
+	 * @param allAgents List of all agents in the environment.
+	 * @param obstacles List of obstacles in the environment.
+	 */
 	void update(float deltaTime, const sf::RenderWindow& window, const std::vector<Agent*>& allAgents, const std::vector<Obstacle>& obstacles);
+	/**
+	 * @brief Helper to draw an SFML line.
+	 * @param window The window to draw the line on.
+	 * @param start Start position of the line.
+	 * @param end End position of the line.
+	 * @param color Color of the line. (sf::Color)
+	 */
 	void drawLine(sf::RenderTarget& window, const sf::Vector2f& start, const sf::Vector2f& end, const sf::Color& color) const;
+	/**
+	 * @brief Helper to draw an SFML circle.
+	 * @param window The window to draw the circle on.
+	 * @param position Position of the circle.
+	 * @param radius Radius of the circle.
+	 * @param color Color of the circle. (sf::Color)
+	 */
 	void drawCircle(sf::RenderTarget& window, const sf::Vector2f& position, float radius, const sf::Color& color) const;
-	void drawVisualizations(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const;
+	/**
+	 * @brief Draws all visualizations for the agent.
+	 * @param window The window to draw on.
+	 * @param allAgents List of all agents in the environment.
+	 */
+	void drawVisualizations(sf::RenderTarget& window, const std::vector<Agent*>& allAgents) const;
 
 	// -- Setters --
 
@@ -302,7 +328,15 @@ private:
 
 	// **=== Private Methods ===**
 
-	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method
+	/**
+	 * @brief Draws the agent on the specified render window. (Overriding sf::Drawable's draw method)
+	 * @param window The window to draw on.
+	 * @param states State used for drawing to the window.
+	 */
+	virtual void draw(sf::RenderTarget& window, sf::RenderStates states) const override;
+	/**
+	 * @brief Sets up the shape of the agent.
+	 */
 	void setupShape(); 
 	/**
 	 * @brief Handles the agent's position when it reaches the window boundaries.
@@ -312,23 +346,98 @@ private:
 
 	// **=== Visualizations ===**
 
-	void drawVelocityLine(sf::RenderTarget& target) const;
+	/**
+	 * @brief Draws velocity line for the agent.
+	 * @param window The window to draw on.
+	 */
+	void drawVelocityLine(sf::RenderTarget& window) const;
+	/**
+	 * @brief Draws the visuals for the current behaviour.
+	 * @param window The window to draw on.
+	 */
 	void drawBehaviourVisuals(sf::RenderTarget& target, const std::vector<Agent*>& allAgents) const;
 
 	// **=== Steering Behaviours ===**
 
+	/**
+	 * @brief Applies steering force to the agent based on desired velocity.
+	 * @param desiredVelocity The desired velocity to steer towards.
+	 * @param maxSteeringForce The maximum steering force to apply.
+	 * @param strength The strength of the steering force.
+	 * @param weighting The weighting of the steering force.
+	 * @param deltaTime Time since the last update.
+	 */
 	void applySteeringFromDesiredVelocity(const sf::Vector2f& desiredVelocity, float maxSteeringForce, float strength, float weighting, float deltaTime);
+	/**
+	 * @brief Applies steering force to the agent based on a given force.
+	 * @param force The steering force to apply.
+	 * @param maxSteeringForce The maximum steering force to apply.
+	 * @param strength The strength of the steering force.
+	 * @param weighting The weighting of the steering force.
+	 * @param deltaTime Time since the last update.
+	 */
 	void applySteeringFromForce(sf::Vector2f force, float maxSteeringForce, float strength, float weighting, float deltaTime);
+	/**
+	 * @brief Calculates and applies the steering force for the seek behaviour.
+	 * @param deltaTime Time since the last update.
+	 */
 	void seek(float deltaTime);
+	/**
+	 * @brief Calculates and applies the steering force for the flee behaviour.
+	 * @param deltaTime Time since the last update.
+	 */
 	void flee(float deltaTime);
+	/**
+	 * @brief Calculates and applies the steering force for the wander behaviour.
+	 * @param deltaTime Time since the last update.
+	 */
 	void wander(float deltaTime);
-	void separate(float deltaTime, const std::vector<Agent*>& allAgents);
+	/**
+	 * @brief Calculates and applies the steering force for the seperation behaviour.
+	 * @param deltaTime Time since the last update.
+	 * @param allAgents List of all agents in the environment.
+	 */
+	void separation(float deltaTime, const std::vector<Agent*>& allAgents);
+	/**
+	 * @brief Calculates and applies the steering force for the cohesion behaviour.
+	 * @param deltaTime Time since the last update.
+	 * @param allAgents List of all agents in the environment.
+	 */
 	void cohesion(float deltaTime, const std::vector<Agent*>& allAgents);
+	/**
+	 * @brief Calculates and applies the steering force for the alignment behaviour.
+	 * @param deltaTime Time since the last update.
+	 * @param allAgents List of all agents in the environment.
+	 */
 	void alignment(float deltaTime, const std::vector<Agent*>& allAgents);
+	/**
+	 * @brief Calculates and applies the steering force for the pursuit behaviour.
+	 * @param deltaTime Time since the last update.
+	 * @param allAgents List of all agents in the environment.
+	 */
 	void pursuit(float deltaTime, const std::vector<Agent*>& allAgents);
+	/**
+	 * @brief Calculates and applies the steering force for the evasion behaviour.
+	 * @param deltaTime Time since the last update.
+	 * @param allAgents List of all agents in the environment.
+	 */
 	void evasion(float deltaTime, const std::vector<Agent*>& allAgents);
+	/**
+	 * @brief Calculates and applies the steering force for the obstacle avoidance behaviour.
+	 * @param deltaTime Time since the last update.
+	 * @param obstacles List of obstacles in the environment.
+	 */
 	void obstacleAvoidance(float deltaTime, const std::vector<Obstacle>& obstacles);
+	/**
+	 * @brief Calculates and applies the steering force for the arrival behaviour.
+	 * @param deltaTime Time since the last update.
+	 */
 	void arrival(float deltaTime);
+	/**
+	 * @brief Calculates and applies the steering force for the leader following behaviour.
+	 * @param deltaTime Time since the last update.
+	 * @param allAgents List of all agents in the environment.
+	 */
 	void leaderFollowing(float deltaTime, const std::vector<Agent*>& allAgents);
 };
 

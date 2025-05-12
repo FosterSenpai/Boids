@@ -23,11 +23,9 @@
 int main()
 {
     // **=== Window Setup ===**
-
     sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Foster's Boids", sf::Style::Titlebar | sf::Style::Close);
     window.setFramerateLimit(60);
-
-	// Load font
+	// - Load font -
 	sf::Font font;
 	if (!font.openFromFile("PixelDigivolveItalic-dV8R.ttf")) {
 		std::cerr << "Error: Failed to load font for Sliders" << std::endl;
@@ -41,42 +39,38 @@ int main()
 		sf::Vector2f spawnPos(static_cast<float>(rand() % window.getSize().x), static_cast<float>(rand() % window.getSize().y));
 		agents.push_back(new Agent(spawnPos));
 	}
-
 	if (agents.empty()) {
 		std::cerr << "Error: No agents created, cannot initialize sliders." << std::endl;
 		for (Agent* agent : agents) { delete agent; } // Basic cleanup
 		return EXIT_FAILURE;
 	}
-	Agent* firstAgent = agents[0];
+	Agent* firstAgent = agents[0]; // Get the first agent for slider initialization
 
 	// **=== Obstacle Creation ===**
 	std::vector<Obstacle> obstacles;
-	obstacles.emplace_back(Obstacle(sf::Vector2f(260.f, 230.f), sf::Vector2f(100.f, 80.f)));
-	obstacles.emplace_back(Obstacle(sf::Vector2f(600.f, 300.f), sf::Vector2f(100.f, 80.f)));
-	obstacles.emplace_back(Obstacle(sf::Vector2f(1000.f, 400.f), sf::Vector2f(100.f, 80.f)));
+	obstacles.emplace_back(Obstacle(sf::Vector2f(260.0f, 230.0f), sf::Vector2f(100.0f, 80.0f)));
+	obstacles.emplace_back(Obstacle(sf::Vector2f(600.0f, 300.0f), sf::Vector2f(100.0f, 80.0f)));
+	obstacles.emplace_back(Obstacle(sf::Vector2f(1000.0f, 400.0f), sf::Vector2f(100.0f, 80.0f)));
 
 	// **=== UI Setup ===**
 	// -- Text in bottom left corner --
 	sf::Text behaviourText(font);
 	behaviourText.setCharacterSize(20);
 	behaviourText.setFillColor(sf::Color::Black);
-	behaviourText.setPosition({10.f, window.getSize().y - 30.f});
-	// Build string from first agents behaviour (updated down by draw)
+	behaviourText.setPosition({10.0f, 10.0f});
 	std::string behaviourString = "Behaviour: ";
 	behaviourText.setString(behaviourString);
 	// -- Text in bottom right corner --
 	sf::Text instructionText(font);
 	instructionText.setString("1-9: Change Behaviour | V: Toggle Visuals | LMB: Spawn/Target");
-	instructionText.setCharacterSize(14); // Slightly smaller
+	instructionText.setCharacterSize(14);
 	instructionText.setFillColor(sf::Color::Black);
-	// Set position to bottom right corner
-	instructionText.setPosition({ 750.0f, 690.0f});
-
-
+	instructionText.setPosition({ 10.0f, 700.0f});
 	// ---- Sliders ----
+	bool showVisualizations = false;
 	std::vector<std::unique_ptr<Slider>> sliders;  // Vector to hold sliders
 	sf::Vector2f sliderSize(200.0f, 10.0f);        // Size of the slider track
-	float sliderStartY = 20.0f;                    // Starting Y position for the first slider
+	float sliderStartY = 55.0f;                    // Starting Y position for the first slider
 	float sliderSpacingY = 35.0f;                  // Space from the start of one slider to the start of the next
 	float sectionSpacing = 15.0f;                  // Extra space between sections
 	float sliderStartX = 10.0f; 			       // Starting X position for the sliders
@@ -94,18 +88,18 @@ int main()
 	addSlider(0.0f, 10.0f, firstAgent->getSeekStrength(), "Seek Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getSeekMaxSteeringForce(), "Seek Max Force: ");
 	// --- Flee Sliders ---
-	sliderStartY = 55.0f; // Reset Y position for next section
+	sliderStartY = 90.0f; // Reset Y position for next section
 	addSlider(0.0f, 1.0f, firstAgent->getFleeWeighting(), "Flee Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getFleeStrength(), "Flee Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getFleeMaxSteeringForce(), "Flee Max Force: ");
 	// --- Wander Sliders ---
-	sliderStartY = 55.0f;
+	sliderStartY = 90.0f;
 	addSlider(0.0f, 1.0f, firstAgent->getWanderWeighting(), "Wander Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getWanderStrength(), "Wander Strength: ");
 	addSlider(0.0f, 1.0f, firstAgent->getWanderAngleRandomStrength(), "Wander Angle Range: ");
 	addSlider(0.0f, 10.0f, firstAgent->getWanderMaxSteeringForce(), "Wander Max Force: ");
 	// --- Separation Sliders ---
-	sliderStartY = 55.0f;
+	sliderStartY = 90.0f;
 	addSlider(0.0f, 1.0f, firstAgent->getSeparationWeighting(), "Separation Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getSeparationStrength(), "Separation Strength: ");
 	addSlider(0.0f, 100.0f, firstAgent->getSeparationNeighbourhoodRadius(), "Separation Radius: ");
@@ -123,17 +117,17 @@ int main()
 	addSlider(0.0f, 10.0f, firstAgent->getAlignmentMaxSteeringForce(), "Alignment Max Force: ");
 	addSlider(0.0f, 200.0f, firstAgent->getAlignmentNeighbourhoodRadius(), "Alignment Radius: ");
 	// --- Pursuit Sliders ---
-	sliderStartY = 55.0f;
+	sliderStartY = 90.0f;
 	addSlider(0.0f, 1.0f, firstAgent->getPursuitWeighting(), "Pursuit Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getPursuitStrength(), "Pursuit Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getPursuitMaxSteeringForce(), "Pursuit Max Force: ");
 	// --- Evasion Sliders ---
-	sliderStartY = 55.0f;
+	sliderStartY = 90.0f;
 	addSlider(0.0f, 1.0f, firstAgent->getEvasionWeighting(), "Evasion Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getEvasionStrength(), "Evasion Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getEvasionMaxSteeringForce(), "Evasion Max Force: ");
 	// --- Obstacle Avoidance Sliders ---
-	sliderStartY = 55.0f;
+	sliderStartY = 90.0f;
 	addSlider(0.0f, 1.0f, firstAgent->getObstacleAvoidanceWeighting(), "Obstacle Avoidance Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getObstacleAvoidanceStrength(), "Obstacle Avoidance Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getObstacleAvoidanceMaxSteeringForce(), "Obstacle Avoidance Max Force: ");
@@ -141,23 +135,19 @@ int main()
 	addSlider(0.0f, 10.0f, firstAgent->getNormalInfluence(), "Normal Influence: ");
 	addSlider(0.0f, 10.0f, firstAgent->getTangentInfluence(), "Tangent Influence: ");
 	// --- Arrival Sliders ---
-	sliderStartY = 55.0f;
+	sliderStartY = 90.0f;
 	addSlider(0.0f, 1.0f, firstAgent->getArrivalWeighting(), "Arrival Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getArrivalStrength(), "Arrival Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getArrivalMaxSteeringForce(), "Arrival Max Force: ");
 	addSlider(0.0f, 300.0f, firstAgent->getArrivalSlowingRadius(), "Arrival Slowing Radius: ");
 	// --- Leader Following Sliders ---
-	sliderStartY = 55.0f;
+	sliderStartY = 90.0f;
 	addSlider(0.0f, 1.0f, firstAgent->getLeaderFollowingWeighting(), "Leader Following Weighting: ");
 	addSlider(0.0f, 10.0f, firstAgent->getLeaderFollowingStrength(), "Leader Following Strength: ");
 	addSlider(0.0f, 10.0f, firstAgent->getLeaderFollowingMaxSteeringForce(), "Leader Following Max Force: ");
 
-
-	bool showVisualizations = false;
-
     // **=== Game Loop ===**
     sf::Clock deltaClock;
-
 	while (window.isOpen())
 	{
 		// Calculate delta time
@@ -220,9 +210,9 @@ int main()
 		sliders[41]->setVisible(currentBehaviour == Behaviour::LEADER_FOLLOWING);
 
 		// Checking if a preset was applied in the last frame to hardcode the sliders
-		Behaviour activePresetForCurrentFrame = Behaviour::NONE; // Stores the preset chosen in the current event poll
+		Behaviour activePresetForCurrentFrame = Behaviour::NONE;        // Stores the preset chosen in the current event poll
 		Behaviour presetAppliedThisFrame = activePresetForCurrentFrame; // Store what was set by events
-		activePresetForCurrentFrame = Behaviour::NONE; // Reset for the next event polling cycle
+		activePresetForCurrentFrame = Behaviour::NONE;                  // Reset for the next event polling cycle
 
 		// **=== Poll Events ===**
 		while (const std::optional event = window.pollEvent())
@@ -338,7 +328,6 @@ int main()
 						slider_ptr->handleEvent(*event);
 					}
 				}
-
 			}
 		}
 
@@ -467,10 +456,8 @@ int main()
 		// **=== Apply Hardcoded Preset Values IF a key was pressed THIS frame ===** (im sorry for the mess)
 		if (presetAppliedThisFrame != Behaviour::NONE) {
 			for (auto& agent : agents) {
-				if (!agent) continue;
-
+				if (!agent) continue; // Check if agent is valid
 				agent->setBehaviour(presetAppliedThisFrame); // Set the core behavior
-
 				if (presetAppliedThisFrame == Behaviour::SEEK) {
 					// Optimal values for SEEK
 					sliders[1]->setValue(1.0f); // Seek Weighting
@@ -668,6 +655,7 @@ int main()
 		default: currentBehaviourString += "NONE"; break;
 		}
 		behaviourText.setString(currentBehaviourString);
+
 		// **=== Rendering ===**
 		window.clear(sf::Color::White);
 
@@ -675,7 +663,6 @@ int main()
 		for (const Obstacle& obs : obstacles) {
 			obs.draw(window);
 		}
-
 		// Draw all agents
 		for (Agent* agent : agents)
 		{
@@ -689,18 +676,16 @@ int main()
 				agent->drawVisualizations(window, agents); // Draw the agent's visualizations
 			}
 		}
-	    
 		// Draw sliders
 		for (auto& slider_ptr : sliders) {
 			if (slider_ptr->getIsVisible()) {
 				window.draw(*slider_ptr);
 			}
 		}
-
 		// Draw text
 		window.draw(behaviourText);
 		window.draw(instructionText);
-		
+
 		window.display();
 	}
 

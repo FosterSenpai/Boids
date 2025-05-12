@@ -27,23 +27,20 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float minValue, float m
     m_window(window),
     m_labelPrefix(label)
 {
-    sf::Transformable::setPosition(position); // Set pos
+    sf::Transformable::setPosition(position);
 
     // --- Track and Handle Setup ---
     // Create track relative to the Slider's local origin
     m_track.setSize(m_size);
     m_track.setFillColor(sf::Color(100, 100, 100));
     m_track.setPosition({ 0.f, 0.f }); // Position track at Slider's local origin
-
     // Create handle relative to the track
     float handleHeight = size.y * 1.5f; // Make handle taller than track
     float handleWidth = handleHeight;   // Make it square
     m_handle.setSize(sf::Vector2f(handleWidth, handleHeight));
     m_handle.setFillColor(sf::Color(200, 200, 200));
-    // Handle local position is set by updateHandlePosition based on m_value
 
     // --- Text ---
-
     // Set up the text properties (Font was passed in the constructor, position is set in updateText)
     m_valueText.setCharacterSize(12);
     m_valueText.setFillColor(sf::Color::Black);
@@ -59,37 +56,29 @@ Slider::Slider(sf::Vector2f position, sf::Vector2f size, float minValue, float m
 void Slider::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     // Apply the Slider's transform
     states.transform *= getTransform();
-
-    // Draw the components using the transformed states
-    // Drawn relative to the Slider's origin
+	// Draw the track, handle, and text
     target.draw(m_track, states);
     target.draw(m_handle, states);
     target.draw(m_valueText, states);
 }
-
 void Slider::handleEvent(const sf::Event& event) {
-    if (!m_window) return; // Need the window pointer for coordinate mapping
-
+	if (!m_window) return; // Ensure the window pointer is valid
     // --- Convert mouse pos to local slider coords ---
     sf::Vector2i mousePixelPos = sf::Mouse::getPosition(*m_window);
     sf::Vector2f mouseWindowPos = m_window->mapPixelToCoords(mousePixelPos);           // Global coords
     sf::Vector2f localMousePos = getInverseTransform().transformPoint(mouseWindowPos); // Convert to local coords
 
-
     // **=== Mouse Events ===**
     // --- Left Mouse Button Pressed ---
     if (const auto* mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (mouseButtonPressed->button == sf::Mouse::Button::Left) {
-
             sf::FloatRect localHandleBounds(m_handle.getPosition(), m_handle.getSize()); // Get handle's local bounds
-
             if (localHandleBounds.contains(localMousePos)) {                          // If mouse is over the handle
                 m_isHandleBeingDragged = true;                                        // Start dragging
                 m_localHandleGrabOffset = localMousePos.x - m_handle.getPosition().x; // Calculate offset from handle's local origin
             }
         }
     }
-
     // --- Left Mouse Button Released ---
     else if (const auto* mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>()) {
         if (mouseButtonReleased->button == sf::Mouse::Button::Left) {
@@ -109,7 +98,6 @@ void Slider::handleEvent(const sf::Event& event) {
             float maxLocalHandleX = m_track.getSize().x - m_handle.getSize().x; // Max local X = track width - handle width
 
             if (maxLocalHandleX < minLocalHandleX) maxLocalHandleX = minLocalHandleX; // Ensure max >= min
-
             float clampedLocalHandleX = std::max(minLocalHandleX, std::min(desiredLocalHandleX, maxLocalHandleX)); // Clamp to local bounds
 
             // --- Calculate the Value ---
@@ -119,7 +107,6 @@ void Slider::handleEvent(const sf::Event& event) {
             // Prevent division by zero
             float valueRange = m_maxValue - m_minValue;
             m_value = (valueRange != 0) ? (m_minValue + valueRange * handlePosNormalized) : m_minValue;
-
             m_value = std::max(m_minValue, std::min(m_value, m_maxValue)); // Clamp final value to range
 
             // --- Set Handle Position ---
@@ -130,11 +117,9 @@ void Slider::handleEvent(const sf::Event& event) {
         }
     }
 }
-
 float Slider::getValue() const {
     return m_value;
 }
-
 void Slider::setValue(float value) {
 	m_value = std::max(m_minValue, std::min(value, m_maxValue)); // Clamp value to range
 	updateHandlePosition(); // Update handle position based on new value
@@ -143,12 +128,10 @@ void Slider::setValue(float value) {
 void Slider::setPosition(const sf::Vector2f& position) {
     sf::Transformable::setPosition(position); // Using Transformable's setPosition
 }
-
 void Slider::setLabel(const std::string& label) {
     m_labelPrefix = label;
     updateText(); // Update display immediately
 }
-
 void Slider::updateText() {
     if (m_font.getInfo().family.empty()) {    // Check if font is loaded
         m_valueText.setString("Font Error!"); // error if font not loaded
@@ -196,6 +179,5 @@ void Slider::updateHandlePosition() {
 
     // Center the handle vertically relative to track
     float handleLocalY = (m_track.getSize().y - m_handle.getSize().y) / 2.0f;
-
     m_handle.setPosition({ handleLocalX, handleLocalY });
 }

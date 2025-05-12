@@ -9,7 +9,11 @@
 // Author : Foster Rae
 // Mail : foster.rae@mds.ac.nz
 // ************************************************************************/
+
+// **=== Includes ===**
 #include "Obstacle.h"
+
+// **=== Constructor ===**
 
 Obstacle::Obstacle(sf::Vector2f position, sf::Vector2f size)
     : m_position(position), m_size(size) {
@@ -21,14 +25,14 @@ Obstacle::Obstacle(sf::Vector2f position, sf::Vector2f size)
     m_shape.setOutlineThickness(2.0f);
 }
 
+// **=== Public Methods ===**
+
 void Obstacle::draw(sf::RenderTarget& target) const {
     target.draw(m_shape);
 }
-
 sf::Vector2f Obstacle::getMinBound() const {
     return m_position; // Top-left corner
 }
-
 sf::Vector2f Obstacle::getMaxBound() const {
     return m_position + m_size; // Bottom-right corner
 }

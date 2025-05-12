@@ -121,7 +121,7 @@ void Agent::update(float deltaTime, const sf::RenderWindow& window, const std::v
 
 	// -- Update Agent Behaviour --
 	obstacleAvoidance(deltaTime, obstacles);
-	separate(deltaTime, allAgents);
+	separation(deltaTime, allAgents);
 	seek(deltaTime);
 	flee(deltaTime);
 	arrival(deltaTime);
@@ -265,7 +265,7 @@ void Agent::wander(float deltaTime)
 	sf::Vector2f wanderSteerForce = m_wanderDesiredVelocity - m_velocity; 
 	applySteeringFromForce(wanderSteerForce, m_wanderMaxSteeringForce, m_wanderStrength, m_wanderWeighting, deltaTime);
 }
-void Agent::separate(float deltaTime, const std::vector<Agent*>& allAgents)
+void Agent::separation(float deltaTime, const std::vector<Agent*>& allAgents)
 {
 	// If behaviour has no weight dont do calculations
 	if (m_separationWeighting <= 0.0f)
@@ -711,7 +711,7 @@ void Agent::leaderFollowing(float deltaTime, const std::vector<Agent*>& allAgent
 	// Default to a zero desired velocity for this behavior
 	m_leaderFollowingDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 
-	const float arrivalToleranceRadiusLF = 15.0f; // Radius for arrival tolerance (TODO: mess around with this a bit)
+	const float arrivalToleranceRadiusLF = 15.0f; // Radius for arrival tolerance
 
 	if (distanceToTargetWorldPos > arrivalToleranceRadiusLF) { // If not at target
 		float desiredSpeed;
@@ -950,5 +950,3 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 		drawLine(window, dangerZoneTopLeft, dangerZoneBottomRight, lineColor);    // Rear side (to close it)
 	}
 }
-
-

@@ -133,4 +133,9 @@ The application implements and demonstrates the following steering behaviours:
   (something about `std::runtime_error` and `sf::Exception`). It's a known thing
   with SFML's DLLs and doesn't seem to break anything.
 
+- Refactoring main.cpp: The main.cpp file is a bit of a mess. It could really use some
+  refactoring to clean up the code and make it more readable. The slider setup and
+  value changing should get pulled into its own func, and same with the key press event
+  handling. (also the hardcoding behaviour values lol)
+
 -------------------------

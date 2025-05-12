@@ -16,17 +16,11 @@
     <Filter Include="Source Files\Core">
       <UniqueIdentifier>{9bfd9c1d-4d20-49aa-aa78-142e27847ceb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Behaviours">
-      <UniqueIdentifier>{1bf83f0c-88e8-4b11-adb9-9dc5ca051905}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\UI">
       <UniqueIdentifier>{b1e18169-0a08-4dd4-878e-b19ac888f10d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Core">
       <UniqueIdentifier>{b79cdf9e-b6bf-4ee5-8f36-36e2812fe9b2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Behaviours">
-      <UniqueIdentifier>{f76f41c3-0708-42db-b107-c7a20905b351}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\UI">
       <UniqueIdentifier>{3a1fe8dd-4887-48a7-92e6-b30a7d2d4b19}</UniqueIdentifier>

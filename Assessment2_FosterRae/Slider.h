@@ -46,38 +46,32 @@ public:
      * @param states Current render states.
      */
     void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
-
     /**
      * @brief Handles SFML events for slider interaction (click, drag).
      * Converts mouse coordinates to the slider's local system for processing.
      * @param event The SFML event to handle.
      */
     void handleEvent(const sf::Event& event);
-
     /**
      * @brief Gets the current value of the slider.
      * @return The current value.
      */
     float getValue() const;
-
 	/**
 	 * @brief Sets the current value of the slider.
 	 * @param value The new value to set.
 	 */
     void setValue(float value);
-
     /**
      * @brief Sets the overall position of the Slider using its Transformable component.
      * @param position The new top-left position in world coordinates.
      */
     void setPosition(const sf::Vector2f& position);
-
     /**
      * @brief Sets the text label prefix for the slider.
      * @param label The new label prefix.
      */
     void setLabel(const std::string& label);
-
     /**
      * @brief Updates the text string and its local position. Called internally.
      */
