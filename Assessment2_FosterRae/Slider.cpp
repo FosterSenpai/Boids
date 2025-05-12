@@ -135,6 +135,11 @@ float Slider::getValue() const {
     return m_value;
 }
 
+void Slider::setValue(float value) {
+	m_value = std::max(m_minValue, std::min(value, m_maxValue)); // Clamp value to range
+	updateHandlePosition(); // Update handle position based on new value
+	updateText();           // Update text display
+}
 void Slider::setPosition(const sf::Vector2f& position) {
     sf::Transformable::setPosition(position); // Using Transformable's setPosition
 }

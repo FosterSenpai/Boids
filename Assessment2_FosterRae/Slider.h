@@ -43,7 +43,7 @@ public:
      * @brief Draws the slider (track, handle, text) to the render target.
      * Applies the Slider's transform.
      * @param target Render target to draw to.
-     * @param states Current render states (including transforms).
+     * @param states Current render states.
      */
     void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
@@ -59,6 +59,12 @@ public:
      * @return The current value.
      */
     float getValue() const;
+
+	/**
+	 * @brief Sets the current value of the slider.
+	 * @param value The new value to set.
+	 */
+    void setValue(float value);
 
     /**
      * @brief Sets the overall position of the Slider using its Transformable component.

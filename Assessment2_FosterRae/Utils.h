@@ -25,6 +25,8 @@ namespace Utils
      */
     float magnitude(const sf::Vector2f& vector);
 
+    float dot(const sf::Vector2f& vec1, const sf::Vector2f& vec2);
+
     /**
      * @brief Truncates a vector to a maximum length.
      * @param vector The vector to be truncated.

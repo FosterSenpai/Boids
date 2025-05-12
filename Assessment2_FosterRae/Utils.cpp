@@ -23,6 +23,11 @@ namespace Utils
         return std::sqrt(vector.x * vector.x + vector.y * vector.y); // Magnitude = sqrt(x^2 + y^2)
     }
 
+    float dot(const sf::Vector2f& vec1, const sf::Vector2f& vec2)
+    {
+        return vec1.x * vec2.x + vec1.y * vec2.y;
+    }
+
     sf::Vector2f truncate(const sf::Vector2f& vector, float max) {
         float length = magnitude(vector); // Calculate magnitude
 

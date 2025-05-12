@@ -23,8 +23,16 @@
 int main()
 {
     // **=== Window Setup ===**
-    sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Foster's Boids");
+
+    sf::RenderWindow window(sf::VideoMode({ 1280, 720 }), "Foster's Boids", sf::Style::Titlebar | sf::Style::Close);
     window.setFramerateLimit(60);
+
+	// Load font
+	sf::Font font;
+	if (!font.openFromFile("PixelDigivolveItalic-dV8R.ttf")) {
+		std::cerr << "Error: Failed to load font for Sliders" << std::endl;
+		return EXIT_FAILURE;
+	}
 
     // **=== Agent Creation ===**
 	std::vector<Agent*> agents;
@@ -48,14 +56,24 @@ int main()
 	obstacles.emplace_back(Obstacle(sf::Vector2f(1000.f, 400.f), sf::Vector2f(100.f, 80.f)));
 
 	// **=== UI Setup ===**
+	// -- Text in bottom left corner --
+	sf::Text behaviourText(font);
+	behaviourText.setCharacterSize(20);
+	behaviourText.setFillColor(sf::Color::Black);
+	behaviourText.setPosition({10.f, window.getSize().y - 30.f});
+	// Build string from first agents behaviour (updated down by draw)
+	std::string behaviourString = "Behaviour: ";
+	behaviourText.setString(behaviourString);
+	// -- Text in bottom right corner --
+	sf::Text instructionText(font);
+	instructionText.setString("1-9: Change Behaviour | V: Toggle Visuals | LMB: Spawn/Target");
+	instructionText.setCharacterSize(14); // Slightly smaller
+	instructionText.setFillColor(sf::Color::Black);
+	// Set position to bottom right corner
+	instructionText.setPosition({ 750.0f, 690.0f});
 
-	// Load font
-	sf::Font font;
-	if (!font.openFromFile("PixelDigivolveItalic-dV8R.ttf")) {
-		std::cerr << "Error: Failed to load font for Sliders" << std::endl;
-		return EXIT_FAILURE;
-	}
 
+	// ---- Sliders ----
 	std::vector<std::unique_ptr<Slider>> sliders;  // Vector to hold sliders
 	sf::Vector2f sliderSize(200.0f, 10.0f);        // Size of the slider track
 	float sliderStartY = 20.0f;                    // Starting Y position for the first slider
@@ -201,10 +219,17 @@ int main()
 		sliders[40]->setVisible(currentBehaviour == Behaviour::LEADER_FOLLOWING);
 		sliders[41]->setVisible(currentBehaviour == Behaviour::LEADER_FOLLOWING);
 
+		// Checking if a preset was applied in the last frame to hardcode the sliders
+		Behaviour activePresetForCurrentFrame = Behaviour::NONE; // Stores the preset chosen in the current event poll
+		Behaviour presetAppliedThisFrame = activePresetForCurrentFrame; // Store what was set by events
+		activePresetForCurrentFrame = Behaviour::NONE; // Reset for the next event polling cycle
+
+		// **=== Poll Events ===**
 		while (const std::optional event = window.pollEvent())
 		{
 			if (event->is<sf::Event::Closed>())
 				window.close();
+
 			// **=== Mouse Events ===**
             if (event->is<sf::Event::MouseButtonPressed>() && event->getIf<sf::Event::MouseButtonPressed>()->button == sf::Mouse::Button::Left)
 			{
@@ -222,136 +247,90 @@ int main()
 				// -- Change what visuals and sliders to show --
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num1) {
 
-					// If already in seek change to none
-					if (firstAgent->getBehaviour() == Behaviour::SEEK) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+					if (presetAppliedThisFrame == Behaviour::SEEK) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to Seek behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::SEEK);
-						}
+						presetAppliedThisFrame = Behaviour::SEEK;
 					}
 				}
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num2) {
-
-					// If already in flee change to none
-					if (firstAgent->getBehaviour() == Behaviour::FLEE) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+					
+					if (presetAppliedThisFrame == Behaviour::FLEE) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to flee behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::FLEE);
-						}
+						presetAppliedThisFrame = Behaviour::FLEE;
 					}
 				}
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num3) {
-					// If already in wander change to none
-					if (firstAgent->getBehaviour() == Behaviour::WANDER) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+
+					if (presetAppliedThisFrame == Behaviour::WANDER) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to wander behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::WANDER);
-						}
+						presetAppliedThisFrame = Behaviour::WANDER;
 					}
 				}
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num4) {
-					// If already in flocking change to none
-					if (firstAgent->getBehaviour() == Behaviour::FLOCKING) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+					if (presetAppliedThisFrame == Behaviour::FLOCKING) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to flocking behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::FLOCKING);
-						}
+						presetAppliedThisFrame = Behaviour::FLOCKING;
 					}
 				}
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num5) {
-					// If already in pursuit change to none
-					if (firstAgent->getBehaviour() == Behaviour::PURSUIT) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+					if (presetAppliedThisFrame == Behaviour::PURSUIT) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to pursuit behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::PURSUIT);
-						}
+						presetAppliedThisFrame = Behaviour::PURSUIT;
 					}
 				}
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num6) {
-					// If already in evasion change to none
-					if (firstAgent->getBehaviour() == Behaviour::EVASION) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+					if (presetAppliedThisFrame == Behaviour::EVASION) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to evasion behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::EVASION);
-						}
+						presetAppliedThisFrame = Behaviour::EVASION;
 					}
 				}
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num7) {
-					// If already in obstacle avoidance change to none
-					if (firstAgent->getBehaviour() == Behaviour::OBSTACLE_AVOIDANCE) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+					if (presetAppliedThisFrame == Behaviour::OBSTACLE_AVOIDANCE) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to obstacle avoidance behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::OBSTACLE_AVOIDANCE);
-						}
+						presetAppliedThisFrame = Behaviour::OBSTACLE_AVOIDANCE;
 					}
 				}
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num8) {
-					// If already in arrival change to none
-					if (firstAgent->getBehaviour() == Behaviour::ARRIVAL) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+					if (presetAppliedThisFrame == Behaviour::ARRIVAL) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to arrival behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::ARRIVAL);
-						}
+						presetAppliedThisFrame = Behaviour::ARRIVAL;
 					}
 				}
 				else if (keyPressed->scancode == sf::Keyboard::Scancode::Num9) {
-					// If already in leader following change to none
-					if (firstAgent->getBehaviour() == Behaviour::LEADER_FOLLOWING) {
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::NONE);
-						}
+					if (presetAppliedThisFrame == Behaviour::LEADER_FOLLOWING) {
+						presetAppliedThisFrame = Behaviour::NONE; // Toggle off
+						for (auto& agent : agents) { agent->setBehaviour(Behaviour::NONE); }
 					}
 					else {
-						// Change to leader following behaviour
-						for (auto& agent : agents) {
-							agent->setBehaviour(Behaviour::LEADER_FOLLOWING);
-						}
+						presetAppliedThisFrame = Behaviour::LEADER_FOLLOWING;
 					}
-					}
+				}
 			}
-
 			// **=== UI Interaction ===**
-
 			// -- Slider Interaction --
 			if (event) {
 				for (auto& slider_ptr : sliders) { // Iterate through all sliders in the vector
@@ -366,7 +345,6 @@ int main()
 		// Mouse position
 		sf::Vector2i mousePixelPos = sf::Mouse::getPosition(window);
 		sf::Vector2f currentMouseTarget(static_cast<float>(mousePixelPos.x), static_cast<float>(mousePixelPos.y));
-
 
 		// **=== Update Agents ===**
 
@@ -486,7 +464,210 @@ int main()
 
 			agent->update(dtSeconds, window, agents, obstacles);
 		}
+		// **=== Apply Hardcoded Preset Values IF a key was pressed THIS frame ===** (im sorry for the mess)
+		if (presetAppliedThisFrame != Behaviour::NONE) {
+			for (auto& agent : agents) {
+				if (!agent) continue;
 
+				agent->setBehaviour(presetAppliedThisFrame); // Set the core behavior
+
+				if (presetAppliedThisFrame == Behaviour::SEEK) {
+					// Optimal values for SEEK
+					sliders[1]->setValue(1.0f); // Seek Weighting
+					sliders[2]->setValue(2.0f); // Seek Strength
+					sliders[3]->setValue(5.0f); // Seek Max Steering Force
+					// Optimal values for other behaviours
+					sliders[4]->setValue(0.0f);  // Flee Weighting
+					sliders[7]->setValue(0.1f);  // Wander Weighting
+					sliders[11]->setValue(0.6f); // Separation Weighting
+					sliders[15]->setValue(0.2f); // Cohesion Weighting
+					sliders[19]->setValue(0.3f); // Alignment Weighting
+					sliders[23]->setValue(0.0f); // Pursuit Weighting
+					sliders[26]->setValue(0.0f); // Evasion Weighting
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[35]->setValue(0.0f); // Arrival Weighting
+					sliders[39]->setValue(0.0f); // Leader Following Weighting
+				}
+				else if (presetAppliedThisFrame == Behaviour::FLEE) 
+				{
+					// Optimal values for FLEE
+					sliders[4]->setValue(1.0f); // Flee Weighting
+					sliders[5]->setValue(2.0f); // Flee Strength
+					sliders[6]->setValue(5.0f); // Flee Max Steering Force
+					// Optimal values for other behaviours
+					sliders[1]->setValue(0.0f);  // Seek Weighting
+					sliders[7]->setValue(0.1f);  // Wander Weighting
+					sliders[11]->setValue(0.4f); // Separation Weighting
+					sliders[15]->setValue(0.2f); // Cohesion Weighting
+					sliders[19]->setValue(0.3f); // Alignment Weighting
+					sliders[23]->setValue(0.0f); // Pursuit Weighting
+					sliders[26]->setValue(0.0f); // Evasion Weighting
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[35]->setValue(0.0f); // Arrival Weighting
+					sliders[39]->setValue(0.0f); // Leader Following Weighting
+				}
+				else if (presetAppliedThisFrame == Behaviour::WANDER)
+				{
+					// Optimal values for WANDER
+					sliders[7]->setValue(1.0f); // Wander Weighting
+					sliders[8]->setValue(2.0f); // Wander Strength
+					sliders[9]->setValue(0.4f); // Wander Angle Random Strength
+					sliders[10]->setValue(5.0f); // Wander Max Steering Force
+					// Optimal values for other behaviours
+					sliders[1]->setValue(0.0f);  // Seek Weighting
+					sliders[4]->setValue(0.0f);  // Flee Weighting
+					sliders[11]->setValue(0.4f); // Separation Weighting
+					sliders[15]->setValue(0.2f); // Cohesion Weighting
+					sliders[19]->setValue(0.3f); // Alignment Weighting
+					sliders[23]->setValue(0.0f); // Pursuit Weighting
+					sliders[26]->setValue(0.0f); // Evasion Weighting
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[35]->setValue(0.0f); // Arrival Weighting
+					sliders[39]->setValue(0.0f); // Leader Following Weighting
+				}
+				else if (presetAppliedThisFrame == Behaviour::FLOCKING)
+				{
+					// Optimal values for FLOCKING
+					// Seperation values
+					sliders[11]->setValue(1.0f); // Separation Weighting
+					sliders[12]->setValue(3.0f); // Separation Strength
+					sliders[13]->setValue(20.0f); // Separation Neighbourhood Radius
+					sliders[14]->setValue(5.0f); // Separation Max Steering Force
+					// Cohesion values
+					sliders[15]->setValue(0.8f); // Cohesion Weighting
+					sliders[16]->setValue(3.0f); // Cohesion Strength
+					sliders[18]->setValue(150.0f); // Cohesion Neighbourhood Radius
+					sliders[17]->setValue(5.0f); // Cohesion Max Steering Force
+					// Alignment values
+					sliders[19]->setValue(0.5f); // Alignment Weighting
+					sliders[20]->setValue(2.0f); // Alignment Strength
+					sliders[22]->setValue(20.0f);// Alignment Neighbourhood Radius
+					sliders[21]->setValue(5.0f); // Alignment Max Steering Force
+					// Optimal values for other behaviours
+					sliders[1]->setValue(0.0f);  // Seek Weighting
+					sliders[4]->setValue(0.0f);  // Flee Weighting
+					sliders[7]->setValue(0.2f);  // Wander Weighting
+					sliders[23]->setValue(0.0f); // Pursuit Weighting
+					sliders[26]->setValue(0.0f); // Evasion Weighting
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[35]->setValue(0.0f); // Arrival Weighting
+					sliders[39]->setValue(0.0f); // Leader Following Weighting
+				}
+				else if (presetAppliedThisFrame == Behaviour::PURSUIT)
+				{
+					// Optimal values for PURSUIT
+					sliders[23]->setValue(1.0f); // Pursuit Weighting
+					sliders[24]->setValue(2.0f); // Pursuit Strength
+					sliders[25]->setValue(5.0f); // Pursuit Max Steering Force
+					// Optimal values for other behaviours
+					sliders[1]->setValue(0.0f);  // Seek Weighting
+					sliders[4]->setValue(0.0f);  // Flee Weighting
+					sliders[7]->setValue(0.1f);  // Wander Weighting
+					sliders[11]->setValue(0.4f); // Separation Weighting
+					sliders[15]->setValue(0.2f); // Cohesion Weighting
+					sliders[19]->setValue(0.3f); // Alignment Weighting
+					sliders[26]->setValue(0.0f); // Evasion Weighting
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[35]->setValue(0.0f); // Arrival Weighting
+					sliders[39]->setValue(0.0f); // Leader Following Weighting
+				}
+				else if (presetAppliedThisFrame == Behaviour::EVASION)
+				{
+					// Optimal values for EVASION
+					sliders[26]->setValue(1.0f); // Evasion Weighting
+					sliders[27]->setValue(4.0f); // Evasion Strength
+					sliders[28]->setValue(5.0f); // Evasion Max Steering Force
+					// Optimal values for other behaviours
+					sliders[23]->setValue(0.0f); // Pursuit Weighting
+					sliders[1]->setValue(0.0f);  // Seek Weighting
+					sliders[4]->setValue(0.0f);  // Flee Weighting
+					sliders[7]->setValue(0.1f);  // Wander Weighting
+					sliders[11]->setValue(0.4f); // Separation Weighting
+					sliders[15]->setValue(0.2f); // Cohesion Weighting
+					sliders[19]->setValue(0.3f); // Alignment Weighting
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[35]->setValue(0.0f); // Arrival Weighting
+					sliders[39]->setValue(0.0f); // Leader Following Weighting
+				}
+				else if (presetAppliedThisFrame == Behaviour::OBSTACLE_AVOIDANCE)
+				{
+					// Optimal values for OBSTACLE AVOIDANCE
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[30]->setValue(10.0f); // Obstacle Avoidance Strength
+					sliders[31]->setValue(10.0f); // Obstacle Avoidance Max Steering Force
+					sliders[32]->setValue(100.0f); // Obstacle Detection Length
+					sliders[33]->setValue(2.0f); // Normal Influence
+					sliders[34]->setValue(7.0f); // Tangent Influence
+					// Optimal values for other behaviours
+					sliders[1]->setValue(0.0f);  // Seek Weighting
+					sliders[4]->setValue(0.0f);  // Flee Weighting
+					sliders[7]->setValue(0.4f);  // Wander Weighting
+					sliders[11]->setValue(0.4f); // Separation Weighting
+					sliders[15]->setValue(0.2f); // Cohesion Weighting
+					sliders[19]->setValue(0.3f); // Alignment Weighting
+					sliders[23]->setValue(0.0f); // Pursuit Weighting
+					sliders[26]->setValue(0.0f); // Evasion Weighting
+					sliders[35]->setValue(0.0f); // Arrival Weighting
+					sliders[39]->setValue(0.0f); // Leader Following Weighting
+				}
+				else if (presetAppliedThisFrame == Behaviour::ARRIVAL)
+				{
+					// Optimal values for ARRIVAL
+					sliders[35]->setValue(1.0f); // Arrival Weighting
+					sliders[36]->setValue(5.0f); // Arrival Strength
+					sliders[37]->setValue(5.0f); // Arrival Max Steering Force
+					sliders[38]->setValue(150.0f); // Arrival Slowing Radius
+					// Optimal values for other behaviours
+					sliders[1]->setValue(0.0f);  // Seek Weighting
+					sliders[4]->setValue(0.0f);  // Flee Weighting
+					sliders[7]->setValue(0.0f);  // Wander Weighting
+					sliders[11]->setValue(0.0f); // Separation Weighting
+					sliders[15]->setValue(0.0f); // Cohesion Weighting
+					sliders[19]->setValue(0.0f); // Alignment Weighting
+					sliders[23]->setValue(0.0f); // Pursuit Weighting
+					sliders[26]->setValue(0.0f); // Evasion Weighting
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[39]->setValue(0.0f); // Leader Following Weighting
+				}
+				else if (presetAppliedThisFrame == Behaviour::LEADER_FOLLOWING)
+				{
+					// Optimal values for LEADER FOLLOWING
+					sliders[39]->setValue(1.0f); // Leader Following Weighting
+					sliders[40]->setValue(5.0f); // Leader Following Strength
+					sliders[41]->setValue(5.0f); // Leader Following Max Steering Force
+					// Optimal values for other behaviours
+					sliders[1]->setValue(0.0f);  // Seek Weighting
+					sliders[4]->setValue(0.0f);  // Flee Weighting
+					sliders[7]->setValue(0.0f);  // Wander Weighting
+					sliders[11]->setValue(0.8f); // Separation Weighting
+					sliders[12]->setValue(10.0f); // Separation Strength
+					sliders[13]->setValue(30.0f); // Separation Neighbourhood Radius
+					sliders[15]->setValue(0.0f); // Cohesion Weighting
+					sliders[19]->setValue(0.0f); // Alignment Weighting
+					sliders[23]->setValue(0.0f); // Pursuit Weighting
+					sliders[26]->setValue(0.0f); // Evasion Weighting
+					sliders[29]->setValue(1.0f); // Obstacle Avoidance Weighting
+					sliders[35]->setValue(0.0f); // Arrival Weighting
+				}
+			}
+		}
+
+		// **=== Update Behaviour Text ===**
+		std::string currentBehaviourString = "Behaviour: ";
+		switch (agents[1]->getBehaviour())
+		{
+		case Behaviour::SEEK: currentBehaviourString += "SEEK"; break;
+		case Behaviour::FLEE: currentBehaviourString += "FLEE"; break;
+		case Behaviour::WANDER: currentBehaviourString += "WANDER"; break;
+		case Behaviour::FLOCKING: currentBehaviourString += "FLOCKING"; break;
+		case Behaviour::PURSUIT: currentBehaviourString += "PURSUIT"; break;
+		case Behaviour::EVASION: currentBehaviourString += "EVASION"; break;
+		case Behaviour::OBSTACLE_AVOIDANCE: currentBehaviourString += "OBSTACLE AVOIDANCE"; break;
+		case Behaviour::ARRIVAL: currentBehaviourString += "ARRIVAL"; break;
+		case Behaviour::LEADER_FOLLOWING: currentBehaviourString += "LEADER FOLLOWING"; break;
+		default: currentBehaviourString += "NONE"; break;
+		}
+		behaviourText.setString(currentBehaviourString);
 		// **=== Rendering ===**
 		window.clear(sf::Color::White);
 
@@ -515,7 +696,12 @@ int main()
 				window.draw(*slider_ptr);
 			}
 		}
+
+		// Draw text
+		window.draw(behaviourText);
+		window.draw(instructionText);
 		
 		window.display();
 	}
+
 }

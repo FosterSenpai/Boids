@@ -87,12 +87,16 @@ Agent::Agent(sf::Vector2f& spawnPos)
 	m_arrivalStrength(5.0f),
 
 	m_leaderFollowingTarget(nullptr),
-	m_followOffset(-80.0f),
+	m_followOffset(-120.0f),
 	m_leaderFollowingWeighting(0.0f),
 	m_leaderFollowingMaxSteeringForce(4.0f),
 	m_leaderFollowingStrength(1.0f),
 	m_isTargetAgent(false),
-	m_lastRotation(0.0f)
+	m_lastRotation(0.0f),
+	m_predictedTargetPos(0.0f, 0.0f),
+	m_leaderDangerZoneLength(60.0f),
+	m_leaderDangerZoneHalfWidth(25.0f),
+	m_lateralEvasionStrength(2.5f)
 {
 	this->setPosition(spawnPos);    // Set the agnets position to spawn position
 	m_target.setPosition(spawnPos); // set for now, gets overridden in update
@@ -402,10 +406,10 @@ void Agent::pursuit(float deltaTime, const std::vector<Agent*>& allAgents)
 	sf::Vector2f selfPos = this->getPosition();              // Save own position
 
 	float predictionTime = Utils::magnitude(targetPos - selfPos) / m_maxSpeed;                     // Calculate time to reach target
-	sf::Vector2f predictedTargetPos = targetPos + m_pursuitTarget->getVelocity() * predictionTime; // Predict target position
+	m_predictedTargetPos = targetPos + m_pursuitTarget->getVelocity() * predictionTime; // Predict target position
 
 	// Calculate desired velocity towards predicted target position
-	m_pursuitDesiredVelocity = Utils::normalised(predictedTargetPos - selfPos) * m_maxSpeed; // Normalise and scale to max speed
+	m_pursuitDesiredVelocity = Utils::normalised(m_predictedTargetPos - selfPos) * m_maxSpeed; // Normalise and scale to max speed
 	// Update Steering Force
 	applySteeringFromDesiredVelocity(m_pursuitDesiredVelocity, m_pursuitMaxSteeringForce, m_pursuitStrength, m_pursuitWeighting, deltaTime);
 }
@@ -626,7 +630,7 @@ void Agent::leaderFollowing(float deltaTime, const std::vector<Agent*>& allAgent
 	{
 		if (allAgents[0] != this) // Dont set target for self
 		{
-			m_leaderFollowingTarget = allAgents[0]; // Set target to the first agent in the list
+			m_leaderFollowingTarget = allAgents[0];
 			m_leaderFollowingTarget->setAsTargetAgent(true);
 		}
 	}
@@ -659,33 +663,69 @@ void Agent::leaderFollowing(float deltaTime, const std::vector<Agent*>& allAgent
 		leaderDirection = sf::Vector2f(std::cos(angleRad), std::sin(angleRad));
 	}
 
-	// Calculate targetWorldPos using this leaderDirection
-	sf::Vector2f targetWorldPos = allAgents[0]->getPosition() + leaderDirection * m_followOffset;
+	// --- Check if Follower is in Danger Zone ---
+	sf::Vector2f selfPos = this->getPosition();
+	sf::Vector2f leaderPos = allAgents[0]->getPosition(); // Get leader position
+	sf::Vector2f vectorToSelfFromLeader = selfPos - leaderPos;
 
+	float forwardDistance = Utils::dot(vectorToSelfFromLeader, leaderDirection); // Forward distance
+	sf::Vector2f leaderRightPerp(-leaderDirection.y, leaderDirection.x);         // Right perpendicular
+	float lateralDistance = Utils::dot(vectorToSelfFromLeader, leaderRightPerp); // Lateral distance
 
-	// Arrive at this Target World Position (just copied arrival logic over, didnt have time to make this use that func)
+	// Check if follower is in the danger zone
+	bool isInDangerZone = false;
+	if (forwardDistance > 0 && forwardDistance < m_leaderDangerZoneLength &&
+		std::abs(lateralDistance) < m_leaderDangerZoneHalfWidth)
+	{
+		isInDangerZone = true;
+	}
+
+	// --- Calculate Desired Velocity ---
+	// -- In danger zone, evade the leader --
+	if (isInDangerZone)
+	{
+		// The steering direction is perpendicular to the leader's path.
+		sf::Vector2f evasionDirection = leaderRightPerp;
+		if (lateralDistance < 0) // If follower is to the left
+		{
+			evasionDirection = -leaderRightPerp; // Steer to right
+		}
+
+		// The desired velocity is purely lateral.
+		m_leaderFollowingDesiredVelocity = evasionDirection * m_maxSpeed;
+
+		applySteeringFromDesiredVelocity(
+			m_leaderFollowingDesiredVelocity,
+			m_leaderFollowingMaxSteeringForce * m_lateralEvasionStrength, // Boosted force
+			m_leaderFollowingStrength * m_lateralEvasionStrength,         // Boosted strength
+			m_leaderFollowingWeighting, // Normal weighting, maybe also boost if needed
+			deltaTime
+		);
+	}
+
+	// -- Not in danger zone, follow the leader --
+	sf::Vector2f targetWorldPos = leaderPos + leaderDirection * m_followOffset; // Point behind leader (Make sure m_followOffset is negative to follow behind)
+	// Arrive at this Position (just copied arrival logic over, didnt have time to make this use that func)
 	sf::Vector2f offsetToTargetWorldPos = targetWorldPos - getPosition();
 	float distanceToTargetWorldPos = Utils::magnitude(offsetToTargetWorldPos);
-
 	// Default to a zero desired velocity for this behavior
 	m_leaderFollowingDesiredVelocity = sf::Vector2f(0.0f, 0.0f);
 
-	const float arrivalToleranceRadiusLF = 15.0f;
+	const float arrivalToleranceRadiusLF = 15.0f; // Radius for arrival tolerance (TODO: mess around with this a bit)
 
 	if (distanceToTargetWorldPos > arrivalToleranceRadiusLF) { // If not at target
 		float desiredSpeed;
 		if (m_arrivalSlowingRadius > 0.0f && distanceToTargetWorldPos < m_arrivalSlowingRadius) { // If within slowing radius
-			desiredSpeed = m_maxSpeed * (distanceToTargetWorldPos / m_arrivalSlowingRadius); // Scale speed down based on distance to target
+			desiredSpeed = m_maxSpeed * (distanceToTargetWorldPos / m_arrivalSlowingRadius);      // Scale speed down based on distance to target
 		}
 		else {
 			desiredSpeed = m_maxSpeed; // Full speed like seek
 		}
-		m_leaderFollowingDesiredVelocity = Utils::normalised(offsetToTargetWorldPos) * desiredSpeed;
+		m_leaderFollowingDesiredVelocity = Utils::normalised(offsetToTargetWorldPos) * desiredSpeed; // Normalise and scale to the desired speed
 	}
 
 	// Apply Steering Force
 	applySteeringFromDesiredVelocity( m_leaderFollowingDesiredVelocity, m_leaderFollowingMaxSteeringForce, m_leaderFollowingStrength, m_leaderFollowingWeighting, deltaTime );
-
 	// Stop if Close and Slow (prevent jitter)
 	if (distanceToTargetWorldPos < arrivalToleranceRadiusLF && Utils::magnitude(m_velocity) < 0.5f) {
 		m_velocity = sf::Vector2f(0.0f, 0.0f); // Hard stop
@@ -808,7 +848,7 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance
 			if (distance < m_alignmentNeighbourhoodRadius)
 			{
-				drawLine(window, this->getPosition(), otherAgentPos, sf::Color(255, 165, 0));
+				drawLine(window, this->getPosition(), otherAgentPos, sf::Color(255, 165, 0, 100));
 			}
 		}
 	}
@@ -828,7 +868,7 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 			float distance = Utils::magnitude(selfPos - otherAgentPos); // Calculate distance positions
 			if (distance < m_separationNeighbourhoodRadius)
 			{
-				drawLine(window, this->getPosition(), otherAgentPos, sf::Color::Magenta);
+				drawLine(window, this->getPosition(), otherAgentPos, sf::Color(255, 20, 20, 100));
 			}
 		}
 	}
@@ -851,23 +891,17 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 	{
 		// -- Draw the feeler line --
 		drawLine(window, m_detectionFeelerP1, m_detectionFeelerP2, sf::Color::Yellow);
-		// -- Draw intersection point and normals if threat found --
+		// -- Draw intersection point  --
 		if (m_closestThreatFound) {
 			// Draw the intersection point
 			drawCircle(window, m_intersectionPoint, 4.0f, sf::Color::Red);
-			// Draw the normal at the intersection point
-			sf::Vector2f normalEndPoint = m_intersectionPoint + m_threatNormal * 30.0f;
-			drawLine(window, m_intersectionPoint, normalEndPoint, sf::Color::Cyan);
-			// Draw final avoidance velocity line
-			sf::Vector2f endPoint = this->getPosition() + m_obstacleAvoidanceDesiredVelocity * 1.0f;
-			drawLine(window, this->getPosition(), endPoint, sf::Color::Black);
 		}
 	}
 	// -- Arrival Widget --
 	if (m_arrivalWeighting > 0.0f && m_behaviour == Behaviour::ARRIVAL)
 	{
 		// -- Draw the slowing radius --
-		drawCircle(window, m_target.getPosition(), m_arrivalSlowingRadius, sf::Color(100, 100, 100, 10));
+		drawCircle(window, m_target.getPosition(), m_arrivalSlowingRadius, sf::Color(100, 100, 100, 1));
 		// -- Draw the desired velocity line --
 		sf::Vector2f endPoint = this->getPosition() + m_arrivalDesiredVelocity * 1.0f;
 		drawLine(window, this->getPosition(), endPoint, sf::Color::Magenta);
@@ -894,6 +928,26 @@ void Agent::drawBehaviourVisuals(sf::RenderTarget& window, const std::vector<Age
 		// -- Draw the desired velocity line --
 		sf::Vector2f endPoint = this->getPosition() + m_leaderFollowingDesiredVelocity * 1.0f;
 		drawLine(window, this->getPosition(), endPoint, sf::Color::Magenta);
+		// -- Draw the danger zone --
+		sf::Vector2f selfPos = this->getPosition();
+		sf::Vector2f leaderPos = allAgents[0]->getPosition(); // Get leader position
+		sf::Vector2f vectorToSelfFromLeader = selfPos - leaderPos;
+		float forwardDistance = Utils::dot(vectorToSelfFromLeader, leaderDirection); // Forward distance
+		sf::Vector2f leaderRightPerp(-leaderDirection.y, leaderDirection.x);         // Right perpendicular
+		float lateralDistance = Utils::dot(vectorToSelfFromLeader, leaderRightPerp); // Lateral distance
+
+		// Define the corners of the rect
+		sf::Vector2f dangerZoneTopLeft = leaderPos + leaderRightPerp * m_leaderDangerZoneHalfWidth;
+		sf::Vector2f dangerZoneBottomRight = leaderPos - leaderRightPerp * m_leaderDangerZoneHalfWidth;
+		sf::Vector2f dangerZoneTopRight = dangerZoneTopLeft + leaderDirection * m_leaderDangerZoneLength;
+		sf::Vector2f dangerZoneBottomLeft = dangerZoneBottomRight + leaderDirection * m_leaderDangerZoneLength;
+
+		// Draw lines
+		sf::Color lineColor = sf::Color(100, 100, 100, 10);
+		drawLine(window, dangerZoneBottomRight, dangerZoneBottomLeft, lineColor); // Left side
+		drawLine(window, dangerZoneBottomLeft, dangerZoneTopRight, lineColor);    // Front side
+		drawLine(window, dangerZoneTopRight, dangerZoneTopLeft, lineColor);       // Right side
+		drawLine(window, dangerZoneTopLeft, dangerZoneBottomRight, lineColor);    // Rear side (to close it)
 	}
 }
 

@@ -189,6 +189,15 @@ public:
 	void setLastRotation(float rotation) { m_lastRotation = rotation; }
 	float getLastRotation() const { return m_lastRotation; }
 
+	float getDangerZoneLength() const { return m_leaderDangerZoneLength; }
+	void setDangerZoneLength(float length) { m_leaderDangerZoneLength = length; }
+
+	void setDangerZoneHalfWidth(float width) { m_leaderDangerZoneHalfWidth = width; }
+	float getDangerZoneHalfWidth() const { return m_leaderDangerZoneHalfWidth; }
+
+	float getLateralEvasionStrength() const { return m_lateralEvasionStrength; }
+	void setLateralEvasionStrength(float strength) { m_lateralEvasionStrength = strength; }
+
 private:
 	// **=== Private Members ===**
 	float m_maxSpeed;
@@ -254,6 +263,7 @@ private:
 	float m_pursuitMaxSteeringForce;
 	float m_pursuitStrength;
 	Agent* m_pursuitTarget;
+	sf::Vector2f m_predictedTargetPos;
 	// Evasion
 	float m_evasionWeighting;
 	sf::Vector2f m_evasionDesiredVelocity;
@@ -286,12 +296,14 @@ private:
 	float m_leaderFollowingMaxSteeringForce;
 	float m_leaderFollowingStrength;
 	sf::Vector2f m_leaderFollowingDesiredVelocity;
+	float m_leaderDangerZoneLength;
+	float m_leaderDangerZoneHalfWidth;
+	float m_lateralEvasionStrength;
 
 	// **=== Private Methods ===**
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override; // Overriding sf::Drawable's draw method
 	void setupShape(); 
-
 	/**
 	 * @brief Handles the agent's position when it reaches the window boundaries.
 	 * @param windowSize Size of the window for boundary handling.
